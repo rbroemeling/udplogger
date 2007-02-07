@@ -1,6 +1,5 @@
 /**
  * Multicast UDP Logger Cat
- * the serialization is still broken, the packetid and pid do not get processed right
  **/
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -9,18 +8,13 @@
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <zlib.h>
+#include "udplogger.h"
 
 #define LOGGER_PORT 12345
 #define LOGGER_GROUP "225.0.0.37"
 #define LOGGER_BUFSIZE (1024)
-
-// this should not be modified (it includes the zlib buffer size)
-// Packet is:
-//	[int size][int pid][int id][char[size] zlib data]
-#define LOGGER_ZBUFSZ (int)((LOGGER_BUFSIZE * 1.1) + 12)
-#define LOGGER_HDRSZ (sizeof(int) + sizeof(unsigned long))
-#define LOGGER_RECVBUF (LOGGER_HDRSZ + LOGGER_ZBUFSZ)
 
 int main (int argc, char **argv) {
 	/**
@@ -28,13 +22,15 @@ int main (int argc, char **argv) {
 	 **/
 	struct sockaddr_in addr;
 	int fd, rv, nbytes, addrlen, size;
-	unsigned int pid;
+	LOGGER_PID_T pid;
+	LOGGER_CNT_T cnt;
+
 	struct ip_mreq mreq;
 	char linebuf[LOGGER_BUFSIZE];
-	char recvbuf[LOGGER_RECVBUF];
-	unsigned long buflen, cnt;
+	char recvbuf[LOGGER_SENDBUF];
+	unsigned long buflen;
 	unsigned int yes = 1;
-	char *r;
+	void *r;
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
 		perror("socket()");
@@ -52,7 +48,7 @@ int main (int argc, char **argv) {
 	addr.sin_port = htons(LOGGER_PORT);
 
 	memset(linebuf, 0, LOGGER_BUFSIZE);
-	memset(recvbuf, 0, LOGGER_RECVBUF);
+	memset(recvbuf, 0, LOGGER_SENDBUF);
 
 	if (bind(fd,(struct sockaddr *) &addr,sizeof(addr)) < 0) {
 		perror("bind()");
@@ -69,11 +65,11 @@ int main (int argc, char **argv) {
 
 	while (1) {
 		addrlen = sizeof(addr);
-		if ((nbytes=recvfrom(fd,recvbuf,LOGGER_RECVBUF,0,(struct sockaddr *) &addr, &addrlen)) >= 0) {
+		if ((nbytes=recvfrom(fd,recvbuf,sizeof(recvbuf),0,(struct sockaddr *) &addr, &addrlen)) >= 0) {
 			r = recvbuf;
 			size = nbytes - LOGGER_HDRSZ;
-			pid = *((unsigned int *)r); r += sizeof(unsigned int);
-			cnt = *((unsigned long *)r); r += sizeof(unsigned long);
+			memcpy(&pid, r, sizeof(pid)); r += sizeof(pid);
+			memcpy(&cnt, r, sizeof(cnt)); r += sizeof(cnt);
 			buflen = LOGGER_BUFSIZE;
 			rv = uncompress(linebuf, &buflen, r, size);
 
