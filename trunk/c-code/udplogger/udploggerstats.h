@@ -14,6 +14,21 @@ typedef struct {
 	char *value;
 } kvlist_t;
 
+typedef enum {
+	HTTP_UNKNOWN_METHOD = 0,	/* Set if we don't parse %m */
+	HTTP_EXTENSION_METHOD,		/* Set if it is not an RFC2616 */
+	
+	/* RFC2616 - HTTP Methods */
+	HTTP_OPTIONS, HTTP_GET, HTTP_HEAD, HTTP_POST, HTTP_PUT, HTTP_DELETE,
+	HTTP_TRACE, HTTP_CONNECT
+} http_method;
+
+typedef enum {
+	HTTP_UNKNOWN_PROTOCOL = 0,	/* Set if we don't parse %H */
+	HTTP_EXTENSION_PROTOCOL,
+	HTTP_0_9, HTTP_1_0, HTTP_1_1
+} http_protocol;
+
 typedef struct {
 	LOGGER_PID_T		pid;
 	LOGGER_CNT_T		cnt;
@@ -24,7 +39,7 @@ typedef struct {
 	 **/
 	char *raw_remote_host;		// %h
 	char *raw_auth_user;		// %u
-	char *raw_request_start;	// %t
+	char *raw_request_start;	// %t (CLF ? may want to support %{strftime}t )
 	char *raw_request_line;		// %r
 	char *raw_status_code;		// %s %>s %<s
 	char *raw_body_size;		// %b or %B
@@ -43,9 +58,20 @@ typedef struct {
 	char *raw_bytes_in;			// %I
 	char *raw_bytes_out;		// %O
 
-	kvlist_t headers[HIT_MAX_HEADERS];	// %{}[io]
+	kvlist_t headers[HIT_MAX_HEADERS];	// %{Foo-Bar}[ion]
 
-	unsigned char parse_status;
+	/**
+	 * These are the converted versions of some values
+	 **/
+	http_method			method;
+	http_protocol		protocol;
+	in_addr_t			local_address;
+	in_addr_t			remote_address;
+	unsigned int		body_size;
+	unsigned short		server_port;
+	unsigned int		request_time;
+	unsigned int		bytes_in;
+	unsigned int		bytes_out;
 } hit_t;
 
 #endif //!__UDPLOGGERSTATS_H__

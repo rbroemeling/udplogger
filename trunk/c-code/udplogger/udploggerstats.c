@@ -18,7 +18,7 @@
 #define LOGGER_GROUP "225.0.0.37"
 #define LOGGER_BUFSIZE (1024)
 
-#define LOGGER_FMT "%m %s %B %T \"%U\" \"%q\" \"%a\" \"%{User-agent}o\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
+#define LOGGER_FMT "%m %>s %B %T \"%U\" \"%q\" \"%a\" \"%{blah}o\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
 
 int parse_line(hit_t *hit, char *line, const char *fmt);
 int print_hit(hit_t *hit);
@@ -111,6 +111,57 @@ int main (int argc, char **argv) {
 	}
 }
 
+/**
+ * Converts a string to one of the protocol enums
+ **/
+http_protocol str2protocol(const char *str) {
+	if (!str || *str == '\0')
+		return HTTP_UNKNOWN_PROTOCOL;
+	else if (strcmp(str, "HTTP/1.1") == 0)
+		return HTTP_1_1;
+	else if (strcmp(str, "HTTP/1.0") == 0)
+		return HTTP_1_0;
+	else if (strcmp(str, "HTTP/0.9") == 0)
+		return HTTP_0_9;
+	else
+		return HTTP_EXTENSION_PROTOCOL;
+}
+
+/**
+ * Converts a string to one of the http method enums
+ * This is in oogly tbone micro-optimized notation
+ * Although unreadable, it is faster then if/else trees
+ **/
+http_method str2method(const char *str) {
+	const char *p;
+	if (!str || *str == '\0')
+		return HTTP_UNKNOWN_METHOD;
+
+	p = str;
+	switch (*p) {
+		case 'G':
+			++p; return (strcmp(p, "ET") == 0)?HTTP_GET:HTTP_EXTENSION_METHOD;
+		case 'H':
+			++p; return (strcmp(p, "EAD") == 0)?HTTP_HEAD:HTTP_EXTENSION_METHOD;
+		case 'P':
+			++p; switch (*p) {
+				case 'O':
+					++p; return (strcmp(p, "ST") == 0)?HTTP_POST:HTTP_EXTENSION_METHOD;
+				case 'U':
+					++p; return (*p != '\0' && (*p == 'T' && *(p+1) == '\0'))?HTTP_PUT:HTTP_EXTENSION_METHOD;
+			}
+			return HTTP_EXTENSION_METHOD;
+		case 'O':
+			++p; return (strcmp(p, "PTIONS") == 0)?HTTP_OPTIONS:HTTP_EXTENSION_METHOD;
+		case 'T':
+			++p; return (strcmp(p, "RACE") == 0)?HTTP_TRACE:HTTP_EXTENSION_METHOD;
+		case 'C':
+			++p; return (strcmp(p, "ONNECT") == 0)?HTTP_CONNECT:HTTP_EXTENSION_METHOD;
+		case 'D':
+			++p; return (strcmp(p, "ELETE") == 0)?HTTP_DELETE:HTTP_EXTENSION_METHOD;
+	}
+	return HTTP_EXTENSION_METHOD;
+}
 
 int parse_line(hit_t *hit, char *line, const char *fmt) {
 	char *wp, *tmp;
@@ -203,7 +254,7 @@ int parse_line(hit_t *hit, char *line, const char *fmt) {
 					}
 					++rp;
 					*tmp = '\0';
-					if (*rp == 'i' || *rp == 'o') {
+					if (*rp == 'i' || *rp == 'o' || *rp == 'n') {
 						hit->headers[hpos].key = strdup(hdrbuf);
 						hit->headers[hpos].value = wp;
 						++hpos;
@@ -237,7 +288,17 @@ int parse_line(hit_t *hit, char *line, const char *fmt) {
 		}
 	}
 
-	return PARSE_OK; // need to add error detection
+	if (hit->raw_method) hit->method = str2method(hit->raw_method);
+	if (hit->raw_protocol) hit->protocol = str2protocol(hit->raw_protocol);
+	if (hit->raw_local_address) hit->local_address = inet_addr(hit->raw_local_address);
+	if (hit->raw_remote_address) hit->remote_address = inet_addr(hit->raw_remote_address);
+	if (hit->raw_body_size) hit->body_size = (unsigned int)strtol(hit->raw_body_size, (char **)NULL, 10);
+	if (hit->raw_server_port) hit->server_port = (unsigned short)strtol(hit->raw_server_port, (char **)NULL, 10);
+	if (hit->raw_request_time) hit->request_time = (unsigned int)strtol(hit->raw_request_time, (char **)NULL, 10);
+	if (hit->raw_bytes_in) hit->bytes_in = (unsigned int)strtol(hit->raw_bytes_in, (char **)NULL, 10);
+	if (hit->raw_bytes_in) hit->bytes_out = (unsigned int)strtol(hit->raw_bytes_out, (char **)NULL, 10);
+
+	return PARSE_OK; // need to add more error detection
 }
 
 int print_hit(hit_t *hit) {
