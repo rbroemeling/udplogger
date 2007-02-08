@@ -1,5 +1,5 @@
-#ifndef __UDPLOGGER_STATS_H__
-#define __UDPLOGGER_STATS_H__
+#ifndef __UDPLOGGERSTATS_H__
+#define __UDPLOGGERSTATS_H__
 
 #include "udplogger.h"
 
@@ -50,4 +50,4 @@ typedef struct {
 	unsigned char parse_status;
 } hit_t;
 
-#endif //!__UDPLOGGER_STATS_H__
+#endif //!__UDPLOGGERSTATS_H__
