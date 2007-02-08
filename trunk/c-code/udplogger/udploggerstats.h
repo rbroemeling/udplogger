@@ -3,9 +3,8 @@
 
 #include "udplogger.h"
 
-#define HIT_MAX_HTTP_HEADERS	32
-#define HIT_MAX_RESP_HEADERS	32
-#define HIT_MAX_HDR_LENGTH		64
+#define HIT_MAX_HEADERS		32
+#define HIT_MAX_HDR_LENGTH	64
 
 #define PARSE_OK	0
 #define PARSE_ERR	1
@@ -44,8 +43,7 @@ typedef struct {
 	char *raw_bytes_in;			// %I
 	char *raw_bytes_out;		// %O
 
-	kvlist_t http_headers[HIT_MAX_HTTP_HEADERS];	// %i
-	kvlist_t resp_headers[HIT_MAX_RESP_HEADERS];	// %o
+	kvlist_t headers[HIT_MAX_HEADERS];	// %{}[io]
 
 	unsigned char parse_status;
 } hit_t;

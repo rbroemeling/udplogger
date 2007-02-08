@@ -18,7 +18,7 @@
 #define LOGGER_GROUP "225.0.0.37"
 #define LOGGER_BUFSIZE (1024)
 
-#define LOGGER_FMT "%m %s %B %T \"%U\" \"%q\" \"%a\" \"%{User-agent}i\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
+#define LOGGER_FMT "%m %s %B %T \"%U\" \"%q\" \"%a\" \"%{User-agent}o\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
 
 int parse_line(hit_t *hit, char *line, const char *fmt);
 int print_hit(hit_t *hit);
@@ -101,34 +101,25 @@ int main (int argc, char **argv) {
 				 * in the future, it'd be nice to have all keys allocated once
 				 * and not be re-allocated.
 				 **/
-				for (i = 0; i < HIT_MAX_HTTP_HEADERS; ++i)
-					if (hit.http_headers[i].key != NULL) {
-						free(hit.http_headers[i].key);
-						hit.http_headers[i].key = NULL;
+				for (i = 0; i < HIT_MAX_HEADERS; ++i)
+					if (hit.headers[i].key != NULL) {
+						free(hit.headers[i].key);
+						hit.headers[i].key = NULL;
 					} 
-
-				for (i = 0; i < HIT_MAX_RESP_HEADERS; ++i) 
-					if (hit.resp_headers[i].key != NULL) {
-						free(hit.resp_headers[i].key);
-						hit.resp_headers[i].key = NULL;
-					}
 			}
 		}
 	}
 }
 
-/***
- * This is VERY broken, still needs massive work. but this is the concept (a bunch of off-by-one errors)
- **/
+
 int parse_line(hit_t *hit, char *line, const char *fmt) {
 	char *wp, *tmp;
 	const char *rp;
-	int hpos, rpos;
-	char hdrbuf[HIT_MAX_HDR_LENGTH];
+	int hpos;
+	char hdrbuf[HIT_MAX_HEADERS];
 	rp = fmt;
 	wp = line;
 	hpos = 0;
-	rpos = 0;
 
 	while (*rp != '\0') {
 		if (*rp == '%') {
@@ -205,21 +196,17 @@ int parse_line(hit_t *hit, char *line, const char *fmt) {
 				case '{':
 					++rp;
 					tmp = hdrbuf;
-					while (*rp != '}' && *rp != '\0' && tmp != &hdrbuf[HIT_MAX_HDR_LENGTH-1]) {
+					while (*rp != '}' && *rp != '\0' && tmp != &hdrbuf[HIT_MAX_HEADERS-1]) {
 						*tmp = *rp;
 						++tmp;
 						++rp;
 					}
 					++rp;
 					*tmp = '\0';
-					if (*rp == 'i') {
-						hit->http_headers[hpos].key = strdup(hdrbuf);
-						hit->http_headers[hpos].value = wp;
+					if (*rp == 'i' || *rp == 'o') {
+						hit->headers[hpos].key = strdup(hdrbuf);
+						hit->headers[hpos].value = wp;
 						++hpos;
-					} else if (*rp == 'o') {
-						hit->resp_headers[rpos].key = strdup(hdrbuf);
-						hit->resp_headers[rpos].value = wp;
-						++rpos;
 					}
 					break;
 				default:
@@ -277,14 +264,9 @@ int print_hit(hit_t *hit) {
 	printf("  bytes_in:       '%s'\n", hit->raw_bytes_in);
 	printf("  bytes_out:      '%s'\n", hit->raw_bytes_out);
 	printf("  http_headers:\n");
-	for (i = 0; i < HIT_MAX_HTTP_HEADERS; ++i)
-		if (hit->http_headers[i].key != NULL)
-			printf("    '%s' : '%s'\n", hit->http_headers[i].key, hit->http_headers[i].value);
-		else
-			break;
-	for (i = 0; i < HIT_MAX_RESP_HEADERS; ++i)
-		if (hit->resp_headers[i].key != NULL)
-			printf("    '%s' : '%s'\n", hit->resp_headers[i].key, hit->resp_headers[i].value);
+	for (i = 0; i < HIT_MAX_HEADERS; ++i)
+		if (hit->headers[i].key != NULL)
+			printf("    '%s' : '%s'\n", hit->headers[i].key, hit->headers[i].value);
 		else
 			break;
 	

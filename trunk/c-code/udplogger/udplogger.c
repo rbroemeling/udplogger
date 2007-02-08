@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <zlib.h>
 #include "udplogger.h"
 
@@ -44,6 +45,11 @@ int main (int argc, char **argv) {
 		perror("socket()");
 		return 255;
 	}
+
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+		perror("fcntl(F_SETFL, O_NONBLOCK)");
+	
+
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
