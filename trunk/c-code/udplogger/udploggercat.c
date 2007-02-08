@@ -21,7 +21,8 @@ int main (int argc, char **argv) {
 	 * should add command line parsing
 	 **/
 	struct sockaddr_in addr;
-	int fd, rv, nbytes, addrlen, size;
+	int fd, rv, nbytes, size;
+	socklen_t addrlen;
 	LOGGER_PID_T pid;
 	LOGGER_CNT_T cnt;
 
@@ -71,10 +72,10 @@ int main (int argc, char **argv) {
 			memcpy(&pid, r, sizeof(pid)); r += sizeof(pid);
 			memcpy(&cnt, r, sizeof(cnt)); r += sizeof(cnt);
 			buflen = LOGGER_BUFSIZE;
-			rv = uncompress(linebuf, &buflen, r, size);
+			rv = uncompress((Bytef *)linebuf, &buflen, r, size);
 
 			if (rv == Z_OK)
-				printf("[%s] [id=%lu] [pid=%u] %s\n", inet_ntoa(addr.sin_addr), cnt, pid, linebuf);
+				printf("[%s] [id=%u] [pid=%u] %s\n", inet_ntoa(addr.sin_addr), cnt, pid, linebuf);
 		}
 	}
 }
