@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #include <zlib.h>
 #include "udplogger.h"
 #include "udploggerstats.h"
@@ -18,10 +19,12 @@
 #define LOGGER_GROUP "225.0.0.37"
 #define LOGGER_BUFSIZE (1024)
 
-#define LOGGER_FMT "%m %>s %B %T \"%U\" \"%q\" \"%a\" \"%{blah}o\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
+#define LOGGER_FMT "%m %>s %B %T \"%U\" \"%q\" \"%a\" \"%{User-Agent}o\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
 
 int parse_line(hit_t *hit, char *line, const char *fmt);
-int print_hit(hit_t *hit);
+http_protocol str2protocol(const char *str);
+http_method str2method(const char *str);
+void help(void);
 
 int main (int argc, char **argv) {
 	/**
@@ -30,6 +33,11 @@ int main (int argc, char **argv) {
 	struct sockaddr_in addr;
 	int fd, rv, nbytes, size, i;
 	socklen_t addrlen;
+	char *e;
+
+	void *dlhandle; /* for the test module */
+	int (*dlhit)(hit_t *);
+	int (*dlinit)(void);
 
 	LOGGER_PID_T pid;
 	LOGGER_CNT_T cnt;
@@ -77,6 +85,20 @@ int main (int argc, char **argv) {
 
 	memset(&hit, 0, sizeof(hit));
 
+	dlerror();
+	dlhandle = dlopen("./example_module.so", RTLD_LAZY);
+	if ((e = dlerror()) != NULL)  {
+		fprintf(stderr, "%s\n", e);
+		exit(255);
+	}
+	if (dlhandle) {
+		dlinit = dlsym(dlhandle, "init");
+		dlhit = dlsym(dlhandle, "hit");
+
+		(*dlinit)();
+	}
+
+
 	while (1) {
 		addrlen = sizeof(addr);
 		if ((nbytes=recvfrom(fd,recvbuf,sizeof(recvbuf),0,(struct sockaddr *) &addr, &addrlen)) >= 0) {
@@ -92,10 +114,12 @@ int main (int argc, char **argv) {
 				hit.addr = &addr;
 				hit.cnt = cnt;
 				hit.pid = pid;
-				printf("[parse rv=%i] ", parse_line(&hit, linebuf, fmt));
-				print_hit(&hit); // debug
+				parse_line(&hit, linebuf, fmt);
 
-
+#if 0
+				if (dlhandle)
+					(*dlhit)(&hit);
+#endif
 				/**
 				 * right now keys are strdup'd, so we have to free them
 				 * in the future, it'd be nice to have all keys allocated once
@@ -184,9 +208,6 @@ int parse_line(hit_t *hit, char *line, const char *fmt) {
 					break;
 				case 't':
 					hit->raw_request_start = wp;
-					break;
-				case 'r':
-					hit->raw_request_line = wp;
 					break;
 				case 'b':
 				case 'B':
@@ -301,35 +322,4 @@ int parse_line(hit_t *hit, char *line, const char *fmt) {
 	return PARSE_OK; // need to add more error detection
 }
 
-int print_hit(hit_t *hit) {
-	int i;
-	printf("[%s] [id=%u] [pid=%u]\n", inet_ntoa(hit->addr->sin_addr), hit->cnt, hit->pid);
-	printf("  remote_host:    '%s'\n", hit->raw_remote_host);
-	printf("  auth_user:      '%s'\n", hit->raw_auth_user);
-	printf("  request_start:  '%s'\n", hit->raw_request_start);
-	printf("  request_line:   '%s'\n", hit->raw_request_line);
-	printf("  status_code:    '%s'\n", hit->raw_status_code);
-	printf("  body_size:      '%s'\n", hit->raw_body_size);
-	printf("  remote_address: '%s'\n", hit->raw_remote_address);
-	printf("  local_address:  '%s'\n", hit->raw_local_address);
-	printf("  filename:       '%s'\n", hit->raw_filename);
-	printf("  protocol:       '%s'\n", hit->raw_protocol);
-	printf("  method:         '%s'\n", hit->raw_method);
-	printf("  server_port:    '%s'\n", hit->raw_server_port);
-	printf("  query:          '%s'\n", hit->raw_query);
-	printf("  request_time:   '%s'\n", hit->raw_request_time);
-	printf("  request_url:    '%s'\n", hit->raw_request_url);
-	printf("  server_name:    '%s'\n", hit->raw_server_name);
-	printf("  request_host:   '%s'\n", hit->raw_request_host);
-	printf("  conn_status:    '%s'\n", hit->raw_conn_status);
-	printf("  bytes_in:       '%s'\n", hit->raw_bytes_in);
-	printf("  bytes_out:      '%s'\n", hit->raw_bytes_out);
-	printf("  http_headers:\n");
-	for (i = 0; i < HIT_MAX_HEADERS; ++i)
-		if (hit->headers[i].key != NULL)
-			printf("    '%s' : '%s'\n", hit->headers[i].key, hit->headers[i].value);
-		else
-			break;
-	
-	return 0;
-}
+

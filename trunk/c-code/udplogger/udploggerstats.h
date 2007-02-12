@@ -1,6 +1,9 @@
 #ifndef __UDPLOGGERSTATS_H__
 #define __UDPLOGGERSTATS_H__
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <time.h>
 #include "udplogger.h"
 
 #define HIT_MAX_HEADERS		32
@@ -8,6 +11,8 @@
 
 #define PARSE_OK	0
 #define PARSE_ERR	1
+
+#define DEFAULT_TIME_FMT "%d/%b/%Y:%T %p"
 
 typedef struct {
 	char *key;
@@ -40,7 +45,6 @@ typedef struct {
 	char *raw_remote_host;		// %h
 	char *raw_auth_user;		// %u
 	char *raw_request_start;	// %t (CLF ? may want to support %{strftime}t )
-	char *raw_request_line;		// %r
 	char *raw_status_code;		// %s %>s %<s
 	char *raw_body_size;		// %b or %B
 	char *raw_remote_address;	// %a
@@ -72,6 +76,8 @@ typedef struct {
 	unsigned int		request_time;
 	unsigned int		bytes_in;
 	unsigned int		bytes_out;
+	time_t				timestamp;
+	struct tm			time;
 } hit_t;
 
 #endif //!__UDPLOGGERSTATS_H__
