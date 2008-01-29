@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <time.h>
 #include <string.h>
 #include <stdio.h>
@@ -16,19 +17,26 @@
 #define LOGGER_PORT 12345
 #define LOGGER_GROUP "225.0.0.37"
 
-unsigned long cleanline(unsigned char *buf) {
-	unsigned char *r;
-	unsigned long len = strlen((char *)buf);
 
-	r = buf + len;
-	while (*r == '\0' || *r == '\n' || *r == '\r') 
-		--r;
-	r++;
-	*r = '\0';
-	return strlen((char *)buf);
+size_t trim(unsigned char *buf)
+{
+	size_t i;
+
+	for (i = strlen((char *)buf) - 1; i >= 0; i--)
+	{
+		if (! isspace(buf[i]))
+		{
+			break;
+		}
+	}
+	i++;
+	buf[i] = '\0';
+	return i;
 }
 
-int main (int argc, char **argv) {
+
+int main (int argc, char **argv)
+{
 	/**
 	 * should add command line parsing
 	 **/
@@ -41,15 +49,16 @@ int main (int argc, char **argv) {
 	unsigned long buflen;
 	unsigned char *w;
 
-	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
 		perror("socket()");
 		return 255;
 	}
 
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+	{
 		perror("fcntl(F_SETFL, O_NONBLOCK)");
-	
-
+	}
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
@@ -62,8 +71,9 @@ int main (int argc, char **argv) {
 	pid = (LOGGER_PID_T)getpid();
 	cnt = 0;
 
-	while (fgets((char *)linebuf, LOGGER_BUFSIZE, stdin) != NULL) {
-		buflen = cleanline(linebuf);
+	while (fgets((char *)linebuf, LOGGER_BUFSIZE, stdin) != NULL)
+	{
+		buflen = trim(linebuf);
 		++cnt;
 		w = sendbuf;
 		memcpy(w, &pid, sizeof(pid)); w += sizeof(pid);
@@ -71,7 +81,9 @@ int main (int argc, char **argv) {
 		size = sizeof(sendbuf) - sizeof(pid) - sizeof(cnt);
 		rv = compress2((Bytef *)w, (uLongf *)&size, linebuf, buflen+1, LOGGER_COMPRESSLEVEL);
 		if (rv == Z_OK)
+		{
 			sendto(fd, sendbuf, (size + LOGGER_HDRSZ), 0, (struct sockaddr *) &addr, sizeof(addr));
+		}
 	}
 
 	return 0;
