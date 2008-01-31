@@ -8,6 +8,8 @@
 #include "udplogger.h"
 #include "trim.h"
 
+#define __DEBUG__
+
 // Parameter: the maximum age of a log target before it is expired.
 uintmax_t maximum_target_age = DEFAULT_MAXIMUM_TARGET_AGE;
 
@@ -27,7 +29,11 @@ int main (int argc, char **argv)
 		return i;
 	}
 
-	
+#ifdef __DEBUG__
+	printf("udplogger debug: parameter minimum_target_age = '%lu'\n", maximum_target_age);
+	printf("udplogger debug: parameter listen_port = '%u'\n", listen_port);
+#endif
+
 	return 0;
 }
 
