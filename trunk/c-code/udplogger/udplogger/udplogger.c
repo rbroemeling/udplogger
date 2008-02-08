@@ -18,7 +18,7 @@
 
 int main (int argc, char **argv)
 {
-	struct log_target *current = NULL;
+	struct log_target_t *current = NULL;
 	int data_length = 0;
 	int fd = 0;
 	unsigned char input_buffer[INPUT_BUFFER_SIZE];

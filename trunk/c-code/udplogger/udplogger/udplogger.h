@@ -33,7 +33,7 @@ int bind_socket(uint16_t);
  * Global Variables (variables shared across threads).
  **/
 struct udplogger_configuration_t conf; // Our current configuration (defaults over-ridden by command-line parameters).
-struct log_target *targets = NULL;     // A singly-linked list of the log targets that we should report to.
+struct log_target_t *targets = NULL;     // A singly-linked list of the log targets that we should report to.
 pthread_mutex_t targets_mutex;         // The mutex controlling access to the list of log targets.
 
 /**

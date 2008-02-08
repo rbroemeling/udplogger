@@ -55,11 +55,11 @@ void *beacon_main(void *arg)
  * Takes the current list of log targets, the maximum age that they should be (in seconds),
  * and returns a pruned list of log targets with expired entries removed.
  **/
-struct log_target *expire_log_targets(struct log_target *head, uintmax_t max_age)
+struct log_target_t *expire_log_targets(struct log_target_t *head, uintmax_t max_age)
 {
-	struct log_target *current;
-	struct log_target *previous;
-	struct log_target *tmp;
+	struct log_target_t *current;
+	struct log_target_t *previous;
+	struct log_target_t *tmp;
 	time_t minimum_timestamp = time(NULL) - max_age;
 	
 	current = head;
@@ -90,7 +90,7 @@ struct log_target *expire_log_targets(struct log_target *head, uintmax_t max_age
 }
 
 
-struct log_target *receive_beacon(struct log_target *head, int fd)
+struct log_target_t *receive_beacon(struct log_target_t *head, int fd)
 {
 	struct sockaddr_in source;
 	socklen_t source_len;
@@ -113,9 +113,9 @@ struct log_target *receive_beacon(struct log_target *head, int fd)
  * Takes the current list of log targets and a beacon source, updating the list of log targets
  * with the information in the beacon.
  **/
-struct log_target *update_beacon(struct log_target *head, struct sockaddr_in *beacon_source)
+struct log_target_t *update_beacon(struct log_target_t *head, struct sockaddr_in *beacon_source)
 {
-	struct log_target *current;
+	struct log_target_t *current;
 	
 	// Check to see if we currently know about this target, and if we do update it's beacon timestamp and then return.
 	current = head;
@@ -130,10 +130,10 @@ struct log_target *update_beacon(struct log_target *head, struct sockaddr_in *be
 	}
 	
 	// This is a new target, so add it to our list and then return.
-	current = calloc(1, sizeof(struct log_target));
+	current = calloc(1, sizeof(struct log_target_t));
 	if (! current)
 	{
-		perror("calloc(1, sizeof(struct log_target))");
+		perror("calloc(1, sizeof(struct log_target_t))");
 	}
 	else
 	{
