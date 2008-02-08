@@ -38,7 +38,6 @@ int main (int argc, char **argv)
 	LOG_SERIAL_T log_serial = 0;
 	char output_buffer[LOG_PACKET_SIZE];
 	LOGGER_PID_T pid = 0;
-	fd_set all_set, read_set;
 	int result = 0;
 	char *tmp;
 
@@ -65,56 +64,31 @@ int main (int argc, char **argv)
 	
 	bzero(input_buffer, INPUT_BUFFER_SIZE * sizeof(char));
 	pid = (LOGGER_PID_T)getpid();
-	
-	FD_ZERO(&all_set);
-	FD_SET(STDIN_FILENO, &all_set);
-	FD_SET(fd, &all_set);
-	
-	for ( ; ; ; )
+
+	while (fgets(input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL)
 	{
-		read_set = all_set;
-		result = select(2, read_set, NULL, NULL, NULL);
-		if (result < 0)
+		input_buffer_length = trim(input_buffer);
+		log_serial++;
+	
+		tmp = output_buffer;
+	
+		memcpy(tmp, &pid, sizeof(pid));
+		tmp += sizeof(pid);
+	
+		memcpy(tmp, &log_serial, sizeof(log_serial));
+		tmp += sizeof(log_serial);
+	
+		data_length = sizeof(output_buffer) - sizeof(pid) - sizeof(log_serial);
+		result = compress2((Bytef *)tmp, (uLongf *)&data_length, input_buffer, input_buffer_length + 1, compress_level);
+		if (result == Z_OK)
 		{
-			perror("select");
-			return -1;
+			queue_log_entry(output_buffer, LOG_PACKET_SIZE);
 		}
-		if (result > 0)
-		{
-			if (FD_ISSET(STDIN_FILENO, &read_set))
-			{
-				input_buffer = read_line(STDIN_FILENO, INPUT_BUFFER_SIZE);
-				if (targets)
-				{
-					input_buffer_length = trim(input_buffer);
-					log_serial++;
-					tmp = output_buffer;
-		
-					memcpy(tmp, &pid, sizeof(pid));
-					tmp += sizeof(pid);
-		
-					memcpy(tmp, &log_serial, sizeof(log_serial));
-					tmp += sizeof(log_serial);
-		
-					data_length = sizeof(output_buffer) - sizeof(pid) - sizeof(log_serial);
-					result = compress2((Bytef *)tmp, (uLongf *)&data_length, input_buffer, input_buffer_length + 1, compress_level);
-					if (result == Z_OK)
-					{
-						send_targets(targets, fd, output_buffer, LOG_PACKET_SIZE, 0);
-					}
-				}
-			}
-			if (FD_ISSET(fd, &read_set))
-			{
-				targets = receive_beacon(targets, fd);
-			}
-		}
-		targets = expire_log_targets(targets, maximum_target_age);
 	}
 
 	return 0;
 }
-	
+
 
 int arguments_parse(int argc, char **argv)
 {
