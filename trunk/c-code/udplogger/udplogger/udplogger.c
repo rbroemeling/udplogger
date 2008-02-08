@@ -2,6 +2,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,8 +14,6 @@
 #include "beacon.h"
 #include "udplogger.h"
 #include "trim.h"
-
-#define __DEBUG__
 
 // Parameter: the compression level to use when compressing log data.
 uint8_t compress_level = DEFAULT_COMPRESS_LEVEL;
@@ -28,13 +27,17 @@ uint16_t listen_port = DEFAULT_LISTEN_PORT;
 // Global Variable: a singly-linked list of the log targets that we should report to.
 struct log_target *targets = NULL;
 
+// Global Variable: the mutex controlling access to the list of log targets.
+pthread_mutex_t targets_mutex;
+
 
 int main (int argc, char **argv)
 {
+	struct log_target *current = NULL;
 	int data_length = 0;
 	int fd = 0;
 	unsigned char input_buffer[INPUT_BUFFER_SIZE];
-	unsigned long input_buffer_length = 0;
+	unsigned long input_line_length = 0;
 	LOG_SERIAL_T log_serial = 0;
 	char output_buffer[LOG_PACKET_SIZE];
 	LOGGER_PID_T pid = 0;
@@ -62,12 +65,31 @@ int main (int argc, char **argv)
 		return -1;
 	}
 	
+	// Initialize our send targets mutex.
+	pthread_mutex_init(&targets_mutex, NULL);
+	
 	bzero(input_buffer, INPUT_BUFFER_SIZE * sizeof(char));
 	pid = (LOGGER_PID_T)getpid();
 
-	while (fgets(input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL)
+	while (fgets((char *)input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL)
 	{
-		input_buffer_length = trim(input_buffer);
+		/**
+		 * We do not lock before accessing 'targets' on this initial check because we don't really care if it is an invalid check on occassion.
+		 * Worst case scenarios are:
+		 *  1) we think there are targets when there are not and we do a little extra work preparing the data for
+		 *     sending when it is not going to be sent anywhere.
+		 *  2) we think there are no targets when there are some, and we skip sending them a log entry or two (or even a few).
+		 *
+		 * This check is for efficiency only, and the two edge cases above won't have an appreciable impact on the accuracy
+		 * of the logging system, but the check will save us a lot of unnecessary work and keep our idling impact on system
+		 * resources low.
+		 **/
+		if (! targets)
+		{
+			continue;
+		}
+
+		input_line_length = trim(input_buffer);
 		log_serial++;
 	
 		tmp = output_buffer;
@@ -79,14 +101,22 @@ int main (int argc, char **argv)
 		tmp += sizeof(log_serial);
 	
 		data_length = sizeof(output_buffer) - sizeof(pid) - sizeof(log_serial);
-		result = compress2((Bytef *)tmp, (uLongf *)&data_length, input_buffer, input_buffer_length + 1, compress_level);
+		result = compress2((Bytef *)tmp, (uLongf *)&data_length, input_buffer, input_line_length + 1, compress_level);
 		if (result == Z_OK)
 		{
-			queue_log_entry(output_buffer, LOG_PACKET_SIZE);
+			pthread_mutex_lock(&targets_mutex);
+			current = targets;
+			while (current)
+			{
+				sendto(fd, output_buffer, LOG_PACKET_SIZE, 0, (struct sockaddr *) &(current->address), sizeof(current->address));
+				current = current->next;
+			}
+			pthread_mutex_unlock(&targets_mutex);
 		}
 	}
 
-	return 0;
+	pthread_mutex_destroy(&targets_mutex);
+	pthread_exit(NULL);
 }
 
 
