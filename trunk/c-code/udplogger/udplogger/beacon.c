@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,47 @@
 #include "beacon.h"
 #include "udplogger.h"
 
+
+void *beacon_main(void *arg)
+{
+	fd_set all_set;
+	int fd;
+	fd_set read_set;
+	int result = 0;
+	struct timeval timeout;
+
+	// Set up the socket that will be used to listen for beacons.
+	fd = bind_socket(conf.listen_port);
+	if (fd < 0)
+	{
+		fprintf(stderr, "could not setup beacon-listener socket\n");
+		pthread_exit(NULL);
+	}
+	
+	// Configure our select timeout -- this is used to control the maximum time
+	// between prunes of the target list.
+	timeout.tv_sec = conf.prune_target_maximum_interval;
+	timeout.tv_usec = 0L;
+	
+	FD_ZERO(&all_set);
+	FD_SET(fd, &all_set);
+	while (1)
+	{
+		read_set = all_set;
+		result = select(1, &read_set, NULL, NULL, &timeout);
+		if (result < 0)
+		{
+			perror("beacon-listener select");
+			pthread_exit(NULL);
+		}
+		if (result > 0)
+		{
+		
+		}
+		targets = expire_log_targets(targets, conf.maximum_target_age);
+	}
+	pthread_exit(NULL);
+}
 
 /**
  * expire_log_targets
@@ -62,19 +104,6 @@ struct log_target *receive_beacon(struct log_target *head, int fd)
 		head = update_beacon(head, &source);
 	}
 	return head;
-}
-
-
-void send_targets(struct log_target *head, int fd, void *data, size_t data_length, int flags)
-{
-	struct log_target *current;
-	
-	current = head;
-	while (current)
-	{
-		sendto(fd, data, data_length, flags, (struct sockaddr *) &(current->address), sizeof(current->address));
-		current = current->next;
-	}
 }
 
 
