@@ -9,7 +9,7 @@ struct log_target_t {
 	struct log_target_t *next;
 };
 
-void expire_log_targets(struct log_target_t *, uintmax_t);
+void expire_log_targets(uintmax_t);
 void receive_beacon(struct sockaddr_in *);
 void receive_beacons(int);
 

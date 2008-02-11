@@ -47,7 +47,7 @@ void *beacon_main(void *arg)
 				receive_beacons(fd);
 			}
 		}
-		targets = expire_log_targets(targets, conf.maximum_target_age);
+		expire_log_targets(conf.maximum_target_age);
 	}
 	pthread_exit(NULL);
 }
@@ -58,26 +58,30 @@ void *beacon_main(void *arg)
  * Takes the current list of log targets, the maximum age that they should be (in seconds),
  * and returns a pruned list of log targets with expired entries removed.
  **/
-struct log_target_t *expire_log_targets(struct log_target_t *head, uintmax_t max_age)
+void expire_log_targets(uintmax_t max_age)
 {
 	struct log_target_t *current;
 	struct log_target_t *previous;
 	struct log_target_t *tmp;
 	time_t minimum_timestamp = time(NULL) - max_age;
 	
-	current = head;
+	current = targets;
 	previous = NULL;
 	while (current)
 	{
 		if (current->beacon_timestamp < minimum_timestamp)
-		{
-			if (current == head)
+		{	
+			if (current == targets)
 			{
-				head = current->next;
+				pthread_mutex_lock(&targets_mutex);
+				targets = current->next;
+				pthread_mutex_unlock(&targets_mutex);
 			}
 			if (previous)
 			{
+				pthread_mutex_lock(&targets_mutex);
 				previous->next = current->next;
+				pthread_mutex_unlock(&targets_mutex);
 			}
 			tmp = current;
 			current = current->next;
@@ -148,7 +152,7 @@ void receive_beacons(int fd)
 	{
 		if (strncmp((char *)data, BEACON_STRING, BEACON_PACKET_SIZE) == 0)
 		{
-			head = receive_beacon(&source);
+			receive_beacon(&source);
 		}
 	}
 }
