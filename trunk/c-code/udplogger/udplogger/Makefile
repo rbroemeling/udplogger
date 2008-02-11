@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall
+CFLAGS=-ansi -Wall
 LDLIBS=-lz
 
 all: udplogger
@@ -16,4 +16,4 @@ realclean: clean
 
 rebuild: realclean all
 
-udplogger: beacon.o trim.o udplogger.o
+udplogger: beacon.o socket.o trim.o udplogger.o

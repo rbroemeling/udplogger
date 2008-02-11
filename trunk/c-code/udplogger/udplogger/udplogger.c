@@ -1,21 +1,52 @@
-#include <fcntl.h>
 #include <getopt.h>
 #include <inttypes.h>
-#include <limits.h>
+#include <netinet/in.h>
 #include <pthread.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <zlib.h>
 #include "beacon.h"
-#include "udplogger.h"
+#include "socket.h"
 #include "trim.h"
+#include "udplogger.h"
 
 
+int arguments_parse(int, char **);
+
+
+/*
+ * Global Variable Declarations
+ *
+ * conf          is used to store the configuration of the currently-running udplogger process.
+ * targets       is used to store the list of destinations that this process is currently sending data to.
+ * targets_mutex is a mutex used to control access to the targets variable across threads.
+ */
+struct udplogger_configuration_t conf;
+struct log_target_t *targets = NULL;
+pthread_mutex_t targets_mutex;
+
+
+/*
+ * Default configuration values.  Used if not over-ridden by a command-line parameter.
+ *
+ * DEFAULT_COMPRESS_LEVEL                The default level of compression to use for outgoing logging data.
+ * DEFAULT_LISTEN_PORT                   The default port to both listen on (for beacons) and send (logging data) from.
+ * DEFAULT_MAXIMUM_TARGET_AGE            The default maximum age of a destination on the target list before it is removed.
+ * DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL The default (maximum) interval between prunes of the target list.
+ */
+#define DEFAULT_COMPRESS_LEVEL                0
+#define DEFAULT_LISTEN_PORT                   43824U
+#define DEFAULT_MAXIMUM_TARGET_AGE            120UL
+#define DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL 10L
+
+/**
+ * main()
+ *
+ * Initializes the program configuration and state, then starts the beacon thread before
+ * finally entering the main loop that reads stdin and outputs log entries to any hosts
+ * on the target list.
+ **/
 int main (int argc, char **argv)
 {
 	struct log_target_t *current = NULL;
@@ -42,23 +73,29 @@ int main (int argc, char **argv)
 	printf("udplogger debug: parameter prune_target_maximum_interval = '%ld'\n", conf.prune_target_maximum_interval);
 #endif
 
-	// Set up the socket that will be used to send logging data.
+	/* Set up the socket that will be used to send logging data. */
 	fd = bind_socket(conf.listen_port);
 	if (fd < 0)
 	{
 		fprintf(stderr, "could not setup logging socket\n");
 		return -1;
 	}
+	result = shutdown(fd, SHUT_RD);
+	if (result < 0)
+	{
+		perror("udplogger.c shutdown()");
+		return -1;
+	}
 	
-	// Initialize our send targets mutex.
+	/* Initialize our send targets mutex. */
 	pthread_mutex_init(&targets_mutex, NULL);
 
-	bzero(input_buffer, INPUT_BUFFER_SIZE * sizeof(char));
+	memset(input_buffer, 0, INPUT_BUFFER_SIZE * sizeof(char));
 	pid = (LOGGER_PID_T)getpid();
 
 	while (fgets((char *)input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL)
 	{
-		/**
+		/*
 		 * We do not lock before accessing 'targets' on this initial check because we don't really care if it is an invalid check on occassion.
 		 * Worst case scenarios are:
 		 *  1) we think there are targets when there are not and we do a little extra work preparing the data for
@@ -68,13 +105,13 @@ int main (int argc, char **argv)
 		 * This check is for efficiency only, and the two edge cases above won't have an appreciable impact on the accuracy
 		 * of the logging system, but the check will save us a lot of unnecessary work and keep our idling impact on system
 		 * resources low.
-		 **/
+		 */
 		if (! targets)
 		{
 			continue;
 		}
 
-		input_line_length = trim(input_buffer);
+		input_line_length = trim(input_buffer, INPUT_BUFFER_SIZE - 1);
 		log_serial++;
 	
 		tmp = output_buffer;
@@ -105,6 +142,13 @@ int main (int argc, char **argv)
 }
 
 
+/**
+ * arguments_parse(argc, argv)
+ *
+ * Utility function to parse the passed in arguments using getopt; also responsible for sanity-checking
+ * any passed-in values and ensuring that the program's configuration is sane before returning (i.e.
+ * using default values).
+ **/
 int arguments_parse(int argc, char **argv)
 {
 	int i;
@@ -114,14 +158,14 @@ int arguments_parse(int argc, char **argv)
 		{"help", no_argument, 0, 'h'},
 		{"listen", required_argument, 0, 'l'},
 		{"max_target_age", required_argument, 0, 'm'},
-		{"prunt_target_maximum_interval", required_argument, 0, 'p'},
+		{"prune_target_maximum_interval", required_argument, 0, 'p'},
 		{0, 0, 0, 0}
 	};
 	long long_tmp;
 	int option_index;
 	uintmax_t uint_tmp;
 
-	// Initialize our configuration to the default settings.
+	/* Initialize our configuration to the default settings. */
 	conf.listen_port = DEFAULT_LISTEN_PORT;
 	conf.maximum_target_age = DEFAULT_MAXIMUM_TARGET_AGE;
 	conf.prune_target_maximum_interval = DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL;
@@ -154,7 +198,14 @@ int arguments_parse(int argc, char **argv)
 				}
 				break;
 			case 'h':
-				arguments_show_usage();
+				printf("Usage: udplogger [OPTIONS]\n");
+				printf("\n");
+				printf("  -c, --compress <level>                         gzip compression level to use (0-9, default %d)\n", DEFAULT_COMPRESS_LEVEL);
+				printf("  -h, --help                                     display this help and exit\n");
+				printf("  -l, --listen <port>                            listen for beacons on the given port (default %u)\n", DEFAULT_LISTEN_PORT);
+				printf("  -m, --max_target_age <age>                     expire log targets after <age> seconds (default %lu)\n", DEFAULT_MAXIMUM_TARGET_AGE);
+				printf("  -p, --prune_target_maximum_interval <interval> maximum interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL);
+				printf("\n");
 				return 0;
 			case 'l':
 				uint_tmp = strtoumax(optarg, 0, 10);
@@ -195,61 +246,4 @@ int arguments_parse(int argc, char **argv)
 	}
 
 	return 1;
-}
-
-
-void arguments_show_usage()
-{
-	printf("Usage: udplogger [OPTIONS]\n");
-	printf("\n");
-	printf("  -c, --compress <level>                         gzip compression level to use (0-9, default %u)\n", DEFAULT_COMPRESS_LEVEL);
-	printf("  -h, --help                                     display this help and exit\n");
-	printf("  -l, --listen <port>                            listen for beacons on the given port (default %u)\n", DEFAULT_LISTEN_PORT);
-	printf("  -m, --max_target_age <age>                     expire log targets after <age> seconds (default %lu)\n", DEFAULT_MAXIMUM_TARGET_AGE);
-	printf("  -p, --prune_target_maximum_interval <interval> maximum interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL);
-	printf("\n");
-}
-
-
-int bind_socket(uint16_t listen_port)
-{
-	int fd;
-	int result;
-	unsigned int yes = 1;
-	struct sockaddr_in listen_addr;
-	
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
-	if (fd < 0)
-	{
-		perror("socket()");
-		return fd;
-	}
-	
-	result = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
-	if (result < 0)
-	{
-		perror("setsockopt(SOL_SOCKET, SO_REUSEADDR)");
-		return result;
-	}
-
-	result = fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (result == -1)
-	{
-		perror("fcntl(F_SETFL, O_NONBLOCK)");
-		return result;
-	}
-
-	bzero(&listen_addr, sizeof(listen_addr));
-	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	listen_addr.sin_port = htons(listen_port);
-
-	result = bind(fd, (struct sockaddr *) &listen_addr, sizeof(listen_addr));
-	if (result < 0)
-	{
-		perror("bind()");
-		return result;
-	}
-	
-	return fd;
 }
