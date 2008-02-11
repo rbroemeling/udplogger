@@ -93,7 +93,7 @@ void expire_log_targets(uintmax_t max_age)
 			current = current->next;
 		}
 	}
-	return head;
+	return;
 }
 
 
