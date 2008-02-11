@@ -9,8 +9,8 @@ struct log_target_t {
 	struct log_target_t *next;
 };
 
-struct log_target_t *expire_log_targets(struct log_target_t *, uintmax_t);
-struct log_target_t *receive_beacon(struct log_target_t *, int);
-struct log_target_t *update_beacon(struct log_target_t *, struct sockaddr_in *);
+void expire_log_targets(struct log_target_t *, uintmax_t);
+void receive_beacon(struct sockaddr_in *);
+void receive_beacons(int);
 
 #endif //!__BEACON_H__

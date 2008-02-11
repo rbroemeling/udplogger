@@ -22,7 +22,8 @@ struct udplogger_configuration_t {
 #define LOG_PACKET_SIZE (LOG_HEADER_SIZE + LOG_ZDATA_SIZE)
 
 // Beacon Identifier String
-#define BEACON_STRING "UDP LOGGER BEACON"
+#define BEACON_STRING "UDPLOGGER BEACON"
+#define BEACON_PACKET_SIZE 32
 
 // Function Prototypes
 int arguments_parse(int, char **);

@@ -42,7 +42,10 @@ void *beacon_main(void *arg)
 		}
 		if (result > 0)
 		{
-		
+			if (FD_ISSET(fd, &read_set))
+			{
+				receive_beacons(fd);
+			}
 		}
 		targets = expire_log_targets(targets, conf.maximum_target_age);
 	}
@@ -90,41 +93,23 @@ struct log_target_t *expire_log_targets(struct log_target_t *head, uintmax_t max
 }
 
 
-struct log_target_t *receive_beacon(struct log_target_t *head, int fd)
-{
-	struct sockaddr_in source;
-	socklen_t source_len;
-	unsigned char data[LOG_PACKET_SIZE];
-	ssize_t data_len;
-	
-	source_len = sizeof(source);
-	data_len = recvfrom(fd, data, sizeof(data), 0, (struct sockaddr *) &source, &source_len);
-	if (strncmp((char *)data, BEACON_STRING, LOG_PACKET_SIZE) == 0)
-	{
-		head = update_beacon(head, &source);
-	}
-	return head;
-}
-
-
-/**
- * update_beacon
- *
- * Takes the current list of log targets and a beacon source, updating the list of log targets
- * with the information in the beacon.
- **/
-struct log_target_t *update_beacon(struct log_target_t *head, struct sockaddr_in *beacon_source)
+void receive_beacon(struct sockaddr_in *beacon_source)
 {
 	struct log_target_t *current;
 	
-	// Check to see if we currently know about this target, and if we do update it's beacon timestamp and then return.
-	current = head;
+	/**
+	 * Check to see if we currently know about this target, and if we do update it's beacon timestamp and then return.
+	 *
+	 * Note that we do not lock during this initial check.  This is because the updated field (beacon_timestamp) is only
+	 * ever touched (read or written) by this thread.  If it is ever modified or read in another thread, this will need to lock.
+	 **/
+	current = targets;
 	while (current)
 	{
 		if ((beacon_source->sin_addr.s_addr == current->address.sin_addr.s_addr) && (beacon_source->sin_port == current->address.sin_port))
 		{
 			current->beacon_timestamp = time(NULL);
-			return head;
+			return;
 		}
 		current = current->next;
 	}
@@ -141,9 +126,29 @@ struct log_target_t *update_beacon(struct log_target_t *head, struct sockaddr_in
 		current->address.sin_addr.s_addr = beacon_source->sin_addr.s_addr;
 		current->address.sin_port = beacon_source->sin_port;
 		current->beacon_timestamp = time(NULL);
-		current->next = head;
-		head = current;
-	}
 
-	return head;
+		pthread_mutex_lock(&targets_mutex);
+		current->next = targets;
+		targets = current;
+		pthread_mutex_unlock(&targets_mutex);
+	}
+}
+
+
+void receive_beacons(int fd)
+{
+	struct sockaddr_in source;
+	socklen_t source_len;
+	unsigned char data[BEACON_PACKET_SIZE];
+	ssize_t data_len;
+	
+	source_len = sizeof(source);
+	data_len = recvfrom(fd, data, BEACON_PACKET_SIZE, 0, (struct sockaddr *) &source, &source_len);
+	if (data_len > 0)
+	{
+		if (strncmp((char *)data, BEACON_STRING, BEACON_PACKET_SIZE) == 0)
+		{
+			head = receive_beacon(&source);
+		}
+	}
 }
