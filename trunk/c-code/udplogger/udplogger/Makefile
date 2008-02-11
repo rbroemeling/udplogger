@@ -1,4 +1,6 @@
+CC=gcc
 CFLAGS=-Wall
+LDLIBS=-lz
 
 all: udplogger
 
