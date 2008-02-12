@@ -1,6 +1,9 @@
+REVISION=${shell svn info . | grep '^Revision: ' | sed -e 's/[^0-9]//g'}
+
 CC=gcc
-CFLAGS=-ansi -Wall
+CFLAGS=-ansi -Wall -DREVISION=${REVISION}
 LDLIBS=-lz -pthread
+
 
 all: udplogger
 

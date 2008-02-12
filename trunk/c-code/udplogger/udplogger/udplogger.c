@@ -40,6 +40,7 @@ pthread_mutex_t targets_mutex;
 #define DEFAULT_MAXIMUM_TARGET_AGE            120UL
 #define DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL 10L
 
+
 /**
  * main()
  *
@@ -166,6 +167,7 @@ int arguments_parse(int argc, char **argv)
 		{"listen", required_argument, 0, 'l'},
 		{"max_target_age", required_argument, 0, 'm'},
 		{"prune_target_maximum_interval", required_argument, 0, 'p'},
+		{"version", no_argument, 0, 'v'},
 		{0, 0, 0, 0}
 	};
 	long long_tmp;
@@ -181,7 +183,7 @@ int arguments_parse(int argc, char **argv)
 	while (1)
 	{	
 		option_index = 0;
-		i = getopt_long(argc, argv, "c:hl:m:p:", long_options, &option_index);
+		i = getopt_long(argc, argv, "c:hl:m:p:v", long_options, &option_index);
 		if (i == -1)
 		{
 			break;
@@ -249,6 +251,9 @@ int arguments_parse(int argc, char **argv)
 				}
 				conf.prune_target_maximum_interval = long_tmp;
 				break;
+			case 'v':
+				printf("udplogger revision r%d\n", REVISION);
+				return 0;
 		}
 	}
 
