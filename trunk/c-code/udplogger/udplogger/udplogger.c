@@ -150,8 +150,8 @@ int main (int argc, char **argv)
 		}
 	}
 
-	pthread_mutex_destroy(&targets_mutex);
-	pthread_exit(NULL);
+	/* Don't bother cleaning up our mutex, threads, etc.  The exit procedures will take care of it. */
+	exit(0);
 }
 
 
