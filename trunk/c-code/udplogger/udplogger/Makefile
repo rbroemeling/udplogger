@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-ansi -Wall
-LDLIBS=-lz
+LDLIBS=-lz -pthread
 
 all: udplogger
 

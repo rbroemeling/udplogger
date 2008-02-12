@@ -49,6 +49,8 @@ pthread_mutex_t targets_mutex;
  **/
 int main (int argc, char **argv)
 {
+	pthread_t beacon_thread;
+	pthread_attr_t beacon_thread_attr;
 	struct log_target_t *current = NULL;
 	int data_length = 0;
 	int fd = 0;
@@ -67,17 +69,17 @@ int main (int argc, char **argv)
 	}
 
 #ifdef __DEBUG__
-	printf("udplogger debug: parameter compress_level = '%u'\n", conf.compress_level);
-	printf("udplogger debug: parameter listen_port = '%u'\n", conf.listen_port);
-	printf("udplogger debug: parameter minimum_target_age = '%lu'\n", conf.maximum_target_age);
-	printf("udplogger debug: parameter prune_target_maximum_interval = '%ld'\n", conf.prune_target_maximum_interval);
+	printf("udplogger.c debug: parameter compress_level = '%u'\n", conf.compress_level);
+	printf("udplogger.c debug: parameter listen_port = '%u'\n", conf.listen_port);
+	printf("udplogger.c debug: parameter minimum_target_age = '%lu'\n", conf.maximum_target_age);
+	printf("udplogger.c debug: parameter prune_target_maximum_interval = '%ld'\n", conf.prune_target_maximum_interval);
 #endif
 
 	/* Set up the socket that will be used to send logging data. */
 	fd = bind_socket(conf.listen_port);
 	if (fd < 0)
 	{
-		fprintf(stderr, "could not setup logging socket\n");
+		fprintf(stderr, "udplogger.c could not setup logging socket\n");
 		return -1;
 	}
 	result = shutdown(fd, SHUT_RD);
@@ -90,6 +92,17 @@ int main (int argc, char **argv)
 	/* Initialize our send targets mutex. */
 	pthread_mutex_init(&targets_mutex, NULL);
 
+	/* Start our beacon-listener thread. */
+	pthread_attr_init(&beacon_thread_attr);
+	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
+	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_main, NULL);
+	pthread_attr_destroy(&beacon_thread_attr);
+	if (result)
+	{
+		fprintf(stderr, "udplogger.c could not start beacon thread.\n");
+		return -1;
+	}
+	
 	memset(input_buffer, 0, INPUT_BUFFER_SIZE * sizeof(char));
 	pid = (LOGGER_PID_T)getpid();
 
@@ -185,7 +198,7 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX)
 				{
-					fprintf(stderr, "invalid compress level argument '%s'\n", optarg);
+					fprintf(stderr, "udplogger.c invalid compress level argument '%s'\n", optarg);
 					return -1;
 				}
 				if (uint_tmp >= 0 && uint_tmp <= 9)
@@ -194,7 +207,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				else
 				{
-					fprintf(stderr, "compression level %lu is out of range (0-9)\n", uint_tmp);
+					fprintf(stderr, "udplogger.c compression level %lu is out of range (0-9)\n", uint_tmp);
 				}
 				break;
 			case 'h':
@@ -211,7 +224,7 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX)
 				{
-					fprintf(stderr, "invalid listen port argument '%s'\n", optarg);
+					fprintf(stderr, "udplogger.c invalid listen port argument '%s'\n", optarg);
 					return -1;
 				}
 				if (uint_tmp > 0 && uint_tmp <= 0xFFFF)
@@ -220,7 +233,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				else
 				{
-					fprintf(stderr, "listen argument %lu is out of port range (1-65535)\n", uint_tmp);
+					fprintf(stderr, "udplogger.c listen argument %lu is out of port range (1-65535)\n", uint_tmp);
 					return -1;
 				}
 				break;
@@ -228,7 +241,7 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX)
 				{
-					fprintf(stderr, "invalid maximum target age argument '%s'\n", optarg);
+					fprintf(stderr, "udplogger.c invalid maximum target age argument '%s'\n", optarg);
 					return -1;
 				}
 				conf.maximum_target_age = uint_tmp;
@@ -237,7 +250,7 @@ int arguments_parse(int argc, char **argv)
 				long_tmp = strtol(optarg, 0, 10);
 				if (! long_tmp || long_tmp == LONG_MIN || long_tmp == LONG_MAX)
 				{
-					fprintf(stderr, "invalid prune target maximum interval argument '%s'\n", optarg);
+					fprintf(stderr, "udplogger.c invalid prune target maximum interval argument '%s'\n", optarg);
 					return -1;
 				}
 				conf.prune_target_maximum_interval = long_tmp;
