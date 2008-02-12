@@ -82,12 +82,6 @@ int main (int argc, char **argv)
 		fprintf(stderr, "udplogger.c could not setup logging socket\n");
 		return -1;
 	}
-	result = shutdown(fd, SHUT_RD);
-	if (result < 0)
-	{
-		perror("udplogger.c shutdown()");
-		return -1;
-	}
 	
 	/* Initialize our send targets mutex. */
 	pthread_mutex_init(&targets_mutex, NULL);

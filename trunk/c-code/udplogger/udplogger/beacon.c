@@ -33,12 +33,6 @@ void *beacon_main(void *arg)
 		fprintf(stderr, "beacon.c could not setup beacon-listener socket\n");
 		pthread_exit(NULL);
 	}
-	result = shutdown(fd, SHUT_WR);
-	if (result < 0)
-	{
-		perror("beacon.c shutdown()");
-		pthread_exit(NULL);
-	}
 	
 	/*
 	 * Configure our select timeout -- this is used to control the maximum time
