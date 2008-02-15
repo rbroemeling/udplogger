@@ -143,7 +143,7 @@ int arguments_parse(int argc, char **argv)
 	while (1)
 	{	
 		option_index = 0;
-		i = getopt_long(argc, argv, "c:hl:m:p:v", long_options, &option_index);
+		i = getopt_long(argc, argv, "hl:m:p:t:v", long_options, &option_index);
 		if (i == -1)
 		{
 			break;
@@ -158,6 +158,7 @@ int arguments_parse(int argc, char **argv)
 				printf("  -m, --max_target_age <age>                     expire log targets after <age> seconds (default %lu)\n", DEFAULT_MAXIMUM_TARGET_AGE);
 				printf("  -p, --prune_target_maximum_interval <interval> maximum interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL);
 				printf("  -t, --tag <tag>                                tag the loglines with the given identification prefix (default '%s')\n", DEFAULT_TAG);
+				printf("  -v, --version                                  display udplogger version and exit\n");
 				printf("\n");
 				return 0;
 			case 'l':
@@ -207,7 +208,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				conf.tag = strdup(optarg);
 			case 'v':
-				printf("udplogger revision r%d\n", REVISION);
+				printf("udplogger.c revision r%d\n", REVISION);
 				return 0;
 		}
 	}
