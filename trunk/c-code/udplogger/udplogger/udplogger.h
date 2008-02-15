@@ -7,10 +7,11 @@
  * of udplogger.
  */
 struct udplogger_configuration_t {
-	uint8_t compress_level;
 	uint16_t listen_port;
 	uintmax_t maximum_target_age;
 	long prune_target_maximum_interval;
+	char *tag;
+	uint8_t tag_length;
 };
 
 
@@ -27,24 +28,14 @@ struct log_target_t {
 
 
 /* The maximum length of a single log line (as read from stdin). */
-#define INPUT_BUFFER_SIZE 1024
+#define INPUT_BUFFER_SIZE (1024 * 8)
 
 
-/* The type used to contain the PID of the udplogger process that sent a log packet. */
-#define LOGGER_PID_T u_int32_t
+/* Log packet format is:     [serial]   [tag]      [log data]. */
+#define PACKET_MAXIMUM_SIZE ((10 + 1) + (10 + 1) + INPUT_BUFFER_SIZE)
 
 
-/* The type used to contain a log packet serial number. */
-#define LOG_SERIAL_T u_int32_t
-
-
-/* Log packet format is: [LOG_SERIAL_T logger_pid][LOGGER_PID_T log_serial][zlib data]. */
-#define LOG_HEADER_SIZE (sizeof(LOGGER_PID_T) + sizeof(LOG_SERIAL_T))
-#define LOG_ZDATA_SIZE (int)((INPUT_BUFFER_SIZE * 1.1) + 12)
-#define LOG_PACKET_SIZE (LOG_HEADER_SIZE + LOG_ZDATA_SIZE)
-
-
-/* Beacon packet format is: [BEACON_STRING]. */
+/* Beacon packet format is: [beacon string]. */
 #define BEACON_PACKET_SIZE 32
 #define BEACON_STRING "UDPLOGGER BEACON"
 
