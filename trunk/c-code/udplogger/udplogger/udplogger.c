@@ -241,7 +241,7 @@ void logging_loop(int fd)
 	u_int32_t log_serial = 0;
 	char output_buffer[PACKET_MAXIMUM_SIZE];
 	unsigned long output_buffer_idx = 0;
-	int result;
+	int result = 0;
 	
 	memset(input_buffer, 0, INPUT_BUFFER_SIZE * sizeof(char));
 	while (fgets((char *)input_buffer, INPUT_BUFFER_SIZE, stdin) != NULL)
@@ -266,7 +266,7 @@ void logging_loop(int fd)
 
 		output_buffer_idx = 0;
 
-		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%lu ", log_serial);
+		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%10lu ", log_serial);
 		if (result >= (PACKET_MAXIMUM_SIZE - output_buffer_idx))
 		{
 			output_buffer_idx += PACKET_MAXIMUM_SIZE - output_buffer_idx - 1;
