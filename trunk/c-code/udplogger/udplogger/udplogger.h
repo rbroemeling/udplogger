@@ -32,7 +32,7 @@ struct log_target_t {
 
 
 /* Log packet format is:     [serial]   [tag]      [log data]. */
-#define PACKET_MAXIMUM_SIZE ((10 + 1) + (10 + 1) + INPUT_BUFFER_SIZE)
+#define PACKET_MAXIMUM_SIZE ((20 + 1) + (10 + 1) + INPUT_BUFFER_SIZE)
 
 
 /* Beacon packet format is: [beacon string]. */
