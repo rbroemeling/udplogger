@@ -238,7 +238,7 @@ void logging_loop(int fd)
 	struct log_target_t *current = NULL;
 	unsigned char input_buffer[INPUT_BUFFER_SIZE];
 	unsigned long input_line_length = 0;
-	u_int32_t log_serial = 0;
+	unsigned long log_serial = 0;
 	char output_buffer[PACKET_MAXIMUM_SIZE];
 	unsigned long output_buffer_idx = 0;
 	int result = 0;
