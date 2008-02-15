@@ -266,7 +266,7 @@ void logging_loop(int fd)
 
 		output_buffer_idx = 0;
 
-		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%10lu ", log_serial);
+		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%lu ", log_serial);
 		if (result >= (PACKET_MAXIMUM_SIZE - output_buffer_idx))
 		{
 			output_buffer_idx += PACKET_MAXIMUM_SIZE - output_buffer_idx - 1;
