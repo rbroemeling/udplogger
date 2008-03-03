@@ -130,7 +130,6 @@ int arguments_parse(int argc, char **argv)
 		{0, 0, 0, 0}
 	};
 	long long_tmp;
-	int option_index;
 	uintmax_t uint_tmp;
 
 	/* Initialize our configuration to the default settings. */
@@ -142,8 +141,7 @@ int arguments_parse(int argc, char **argv)
 
 	while (1)
 	{	
-		option_index = 0;
-		i = getopt_long(argc, argv, "hl:m:p:t:v", long_options, &option_index);
+		i = getopt_long(argc, argv, "hl:m:p:t:v", long_options, NULL);
 		if (i == -1)
 		{
 			break;
