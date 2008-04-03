@@ -14,6 +14,7 @@
 #include "socket.h"
 #include "trim.h"
 #include "udplogger.h"
+#include "udplogger.global.h"
 
 
 int arguments_parse(int, char **);
@@ -40,7 +41,7 @@ pthread_mutex_t targets_mutex;
  * DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL The default (maximum) interval between prunes of the target list.
  * DEFAULT_TAG                           The default string that outgoing log entries should be tagged with.
  */
-#define DEFAULT_LISTEN_PORT                   43824U
+#define DEFAULT_LISTEN_PORT                   UDPLOGGER_DEFAULT_PORT
 #define DEFAULT_MAXIMUM_TARGET_AGE            120UL
 #define DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL 10L
 #define DEFAULT_TAG                           ""

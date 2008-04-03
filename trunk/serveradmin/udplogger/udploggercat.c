@@ -1,16 +1,23 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
+#include "udplogger.global.h"
 
 
+int add_log_host(struct sockaddr_in *);
 int arguments_parse(int, char **);
+void *beacon_loop(void *);
+void broadcast_scan();
 
 
 /*
@@ -57,6 +64,8 @@ struct udploggercat_configuration_t {
  **/
 int main (int argc, char **argv)
 {
+	pthread_t beacon_thread;
+	pthread_attr_t beacon_thread_attr;
 	struct log_host_t *debug_log_host_ptr = &conf.log_host;
 	int result = 0;
 
@@ -75,7 +84,58 @@ int main (int argc, char **argv)
 	}
 #endif
 
+	/* Start our beacon thread. */
+	pthread_attr_init(&beacon_thread_attr);
+	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
+	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_loop, NULL);
+	pthread_attr_destroy(&beacon_thread_attr);
+	if (result)
+	{
+		fprintf(stderr, "udploggercat.c could not start beacon thread.\n");
+		return -1;
+	}
+	
+
 	exit(0);
+}
+
+
+/**
+ * add_log_host(sin)
+ *
+ * Simple utility function to take the host designated by sin and add it to the list
+ * of log hosts.  Returns 1 for success and 0 for failure.
+ **/
+int add_log_host(struct sockaddr_in *sin)
+{
+	struct log_host_t *log_host_ptr;
+	
+	log_host_ptr = &conf.log_host;
+	while (log_host_ptr->next)
+	{
+		log_host_ptr = log_host_ptr->next;
+	}
+	
+	if (log_host_ptr->address.sin_family)
+	{
+		log_host_ptr->next = calloc(1, sizeof(struct log_host_t));
+		if (! log_host_ptr->next)
+		{
+			perror("udploggercat.c calloc()");
+			return 0;
+		}
+		log_host_ptr = log_host_ptr->next;
+	}
+	
+	log_host_ptr->address.sin_family = sin->sin_family;
+	log_host_ptr->address.sin_addr.s_addr = sin->sin_addr.s_addr;
+	log_host_ptr->address.sin_port = sin->sin_port;
+	
+#ifdef __DEBUG__
+	printf("udploggercat.c debug: added target %s:%hu\n", inet_ntoa(log_host_ptr->address.sin_addr), log_host_ptr->address.sin_port);
+#endif
+
+	return 1;
 }
 
 
@@ -100,17 +160,16 @@ int arguments_parse(int argc, char **argv)
 		{"version", no_argument, 0, 'v'},
 		{0, 0, 0, 0}
 	};
-	struct log_host_t *log_host_ptr;
+	struct sockaddr_in sin;
 	uintmax_t uint_tmp;
 	
 	/* Initialize our configuration to the default settings. */
 	conf.beacon_interval = DEFAULT_BEACON_INTERVAL;
 	memset(&conf.log_host, 0, sizeof(conf.log_host));
-	log_host_ptr = &conf.log_host;
 	
 	while (1)
 	{	
-		i = getopt_long(argc, argv, "hi:t:v", long_options, NULL);
+		i = getopt_long(argc, argv, "hi:o:v", long_options, NULL);
 		if (i == -1)
 		{
 			break;
@@ -142,6 +201,9 @@ int arguments_parse(int argc, char **argv)
 					fprintf(stderr, "udploggercat.c invalid host specification '%s'\n", optarg);
 					return -1;				
 				}
+#ifdef __DEBUG__
+				printf("udploggercat.c debug: parsing host target '%s'\n", optarg);
+#endif
 				
 				hostname_tmp = strndup(optarg, (char_ptr - optarg));
 				if (! hostname_tmp)
@@ -149,7 +211,10 @@ int arguments_parse(int argc, char **argv)
 					fprintf(stderr, "udploggercat.c could not allocate memory to record host '%s'\n", optarg);
 					return -1;
 				}
-				
+#ifdef __DEBUG__
+				printf("udploggercat.c debug:   determined hostname '%s'\n", hostname_tmp);
+#endif
+
 				char_ptr++;
 				if (char_ptr)
 				{
@@ -166,7 +231,10 @@ int arguments_parse(int argc, char **argv)
 					fprintf(stderr, "udploggercat.c missing port in host specification '%s'\n", optarg);
 					free(hostname_tmp);
 					return -1;
-				}		
+				}
+#ifdef __DEBUG__
+				printf("udploggercat.c debug:   determined port '%lu'\n", uint_tmp);
+#endif
 
 				hostent_ptr = gethostbyname(hostname_tmp);
 				if (! hostent_ptr)
@@ -179,20 +247,17 @@ int arguments_parse(int argc, char **argv)
 				
 				for (j = 0; hostent_ptr->h_addr_list[j] != NULL; j++)
 				{
-					if (log_host_ptr->address.sin_family == AF_INET)
+#ifdef __DEBUG__
+					printf("udploggercat.c debug:     considering address '%s', family '%hu'\n", inet_ntoa(*(struct in_addr *)(hostent_ptr->h_addr_list[j])), hostent_ptr->h_addrtype);
+#endif
+					if (hostent_ptr->h_addrtype == AF_INET)
 					{
-						log_host_ptr->next = calloc(1, sizeof(struct log_host_t));
-						if (! log_host_ptr->next)
-						{
-							perror("udploggercat.c calloc()");
-							return -1;
-						}
-						log_host_ptr = log_host_ptr->next;
+						sin.sin_family = hostent_ptr->h_addrtype;
+						sin.sin_addr.s_addr = ((struct in_addr *)(hostent_ptr->h_addr_list[j]))->s_addr;
+						sin.sin_port = uint_tmp;
+						
+						add_log_host(&sin);
 					}
-					
-					log_host_ptr->address.sin_family = AF_INET;
-					log_host_ptr->address.sin_addr.s_addr = ((struct in_addr *)(hostent_ptr->h_addr_list[j]))->s_addr;
-					log_host_ptr->address.sin_port = uint_tmp;
 				}
 				break;
 			case 'v':
@@ -201,5 +266,136 @@ int arguments_parse(int argc, char **argv)
 		}
 	}
 
+	if (conf.log_host.address.sin_family == 0)
+	{
+		/* No target hosts have been passed in.  Default is to add all broadcast addresses. */
+		broadcast_scan();
+	}
+
 	return 1;
+}
+
+
+/**
+ * beacon_loop()
+ *
+ * The main thread loop for the beacon thread.  Creates a socket and sends beacon packets over it every
+ * conf.beacon_interval.
+ **/
+void *beacon_loop(void *arg)
+{
+
+}
+
+
+/**
+ * broadcast_Scan()
+ *
+ * Iterates through all interfaces on the system and adds all broadcast addresses found to the
+ * conf.log_host list.
+ **/
+void broadcast_scan()
+{
+	int fd;
+	int i;
+	struct ifconf ifc;
+	struct ifreq *ifr;
+	struct log_host_t *log_host_ptr;
+	int max_interfaces = 32; /* The maximum number of interfaces that we should obtain configuration for. */
+	int num_interfaces = 0; /* The number of interfaces that we have actually found. */
+	struct sockaddr_in sin;
+
+	log_host_ptr = &conf.log_host;
+
+	ifc.ifc_len = max_interfaces * sizeof(struct ifreq);
+
+	ifc.ifc_buf = calloc(1, ifc.ifc_len);
+	if (! ifc.ifc_buf)
+	{
+		perror("udploggercat.c calloc(ifc_buf)");
+		return;
+	}
+	
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0)
+	{
+		perror("udploggercat.c socket()");
+		return;
+	}
+	
+	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0)
+	{
+		perror("udploggercat.c ioctl(SIOCGIFCONF)");
+		if (close(fd))
+		{
+			perror("udploggercat.c close()");
+		}
+		return;
+	}
+	
+	ifr = ifc.ifc_req;
+	num_interfaces = ifc.ifc_len / sizeof(struct ifreq);
+	for (i = 0; i++ < num_interfaces; ifr++)
+	{
+#ifdef __DEBUG__
+		printf("udploggercat.c debug: found interface %s (%s)\n", ifr->ifr_name, inet_ntoa(((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr));
+#endif
+		if (ioctl(fd, SIOCGIFFLAGS, ifr) < 0)
+		{
+			perror("udploggercat.c ioctl(SIOCGIFFLAGS)");
+			continue;
+		}
+		
+		if (!(ifr->ifr_flags & IFF_UP))
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:   %s flagged as down\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+		if (ifr->ifr_flags & IFF_LOOPBACK)
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:   %s is a loopback interface\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+		if (ifr->ifr_flags & IFF_POINTOPOINT)
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:   %s is a point-to-point interface\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+		if (!(ifr->ifr_flags & IFF_BROADCAST))
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:   %s does not have the broadcast flag set\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+		
+		if (ioctl(fd, SIOCGIFBRDADDR, ifr) < 0)
+		{
+			perror("udploggercat.c ioctl(SIOCGIFBRDADDR)");
+			continue;
+		}
+		
+		memcpy(&sin, &(ifr->ifr_broadaddr), sizeof(ifr->ifr_broadaddr));
+		if (sin.sin_addr.s_addr == INADDR_ANY)
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:    %s is associated with INADDR_ANY\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+		
+		sin.sin_port = UDPLOGGER_DEFAULT_PORT;
+		add_log_host(&sin);
+	}
+
+	if (close(fd))
+	{
+		perror("udploggercat.c close()");
+	}
 }
