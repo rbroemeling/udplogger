@@ -22,4 +22,4 @@ rebuild: realclean all
 
 udplogger: beacon.o socket.o trim.o udplogger.o
 
-udploggercat: udploggercat.o
+udploggercat: udploggercat.o socket.o

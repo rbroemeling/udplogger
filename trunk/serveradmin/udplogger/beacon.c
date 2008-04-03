@@ -28,7 +28,7 @@ void *beacon_main(void *arg)
 	struct timeval timeout;
 
 	/* Set up the read-only socket that will be used to listen for beacons. */
-	fd = bind_socket(conf.listen_port);
+	fd = bind_socket(conf.listen_port, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "beacon.c could not setup beacon-listener socket\n");

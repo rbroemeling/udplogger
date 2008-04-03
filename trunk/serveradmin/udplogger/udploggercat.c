@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "socket.h"
 #include "udplogger.global.h"
 
 
@@ -66,8 +67,12 @@ int main (int argc, char **argv)
 {
 	pthread_t beacon_thread;
 	pthread_attr_t beacon_thread_attr;
+	char *buffer;
 	struct log_host_t *debug_log_host_ptr = &conf.log_host;
+	int fd;
 	int result = 0;
+	struct sockaddr_in sender;
+	socklen_t senderlen = sizeof(sender);
 
 	result = arguments_parse(argc, argv);
 	if (result <= 0)
@@ -84,6 +89,21 @@ int main (int argc, char **argv)
 	}
 #endif
 
+	/* Set up the socket that will be used to read logging data. */
+	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 1);
+	if (fd < 0)
+	{
+		fprintf(stderr, "udploggercat.c could not setup logging socket\n");
+		return -1;
+	}
+
+	buffer = calloc(PACKET_MAXIMUM_SIZE, sizeof(char));
+	if (! buffer)
+	{
+		perror("udploggercat.c calloc(buffer)");
+		return -1;
+	}
+
 	/* Start our beacon thread. */
 	pthread_attr_init(&beacon_thread_attr);
 	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
@@ -94,8 +114,15 @@ int main (int argc, char **argv)
 		fprintf(stderr, "udploggercat.c could not start beacon thread.\n");
 		return -1;
 	}
-	
 
+	while (1)
+	{
+		if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
+		{
+			buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
+			printf("[%s:%hu] %s\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port), buffer);
+		}
+	}
 	exit(0);
 }
 
@@ -121,7 +148,7 @@ int add_log_host(struct sockaddr_in *sin)
 		log_host_ptr->next = calloc(1, sizeof(struct log_host_t));
 		if (! log_host_ptr->next)
 		{
-			perror("udploggercat.c calloc()");
+			perror("udploggercat.c calloc(log_host)");
 			return 0;
 		}
 		log_host_ptr = log_host_ptr->next;
@@ -304,38 +331,20 @@ void *beacon_main(void *arg)
 	char *beacon;
 	int fd;
 	struct log_host_t *log_host_ptr;
-	struct sockaddr_in sin;
-	int yes = 1;
-	
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = htonl(INADDR_ANY);
-	sin.sin_port = htons(UDPLOGGER_DEFAULT_PORT);
 
 	beacon = calloc(BEACON_PACKET_SIZE, sizeof(char));
 	if (! beacon)
 	{
-		perror("udploggercat.c calloc()");
+		perror("udploggercat.c calloc(beacon)");
 		pthread_exit(NULL);
 	}
 	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
 	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 0);
 	if (fd < 0)
 	{
-		perror("udploggercat.c socket()");
-		pthread_exit(NULL);
-	}
-
-	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes)) < 0)
-	{
-		perror("udploggercat.c setsockopt(SO_BROADCAST)");
-		pthread_exit(NULL);
-	}
-
-	if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) < 0)
-	{
-		perror("udploggercat.c bind()");
+		fprintf(stderr, "udploggercat.c could not setup beacon socket\n");
 		pthread_exit(NULL);
 	}
 

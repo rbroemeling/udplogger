@@ -5,15 +5,15 @@
 #include <string.h>
 
 /**
- * bind_socket(<port>)
+ * bind_socket(<port>, <blocking flag>)
  *
  * Utility function that creates a UDP socket bound to the given port and returns the
- * file descriptor for it.  The descriptor that is returned is non-blocking and has
- * SO_REUSEADDR set.
+ * file descriptor for it.  The descriptor that is returned has SO_BROADCAST and SO_REUSEADDR
+ * set.  If the blocking flag is zero then the descriptor returned is non-blocking.
  *
  * On error returns a negative file descriptor representing the error code encountered.
  **/
-int bind_socket(uint16_t listen_port)
+int bind_socket(uint16_t listen_port, uint16_t blocking)
 {
 	int fd;
 	int result;
@@ -23,22 +23,32 @@ int bind_socket(uint16_t listen_port)
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0)
 	{
-		perror("socket.c socket()");
+		perror("socket.c socket(SOCK_DGRAM)");
 		return fd;
+	}
+	
+	result = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes));
+	if (result < 0)
+	{
+		perror("socket.c setsockopt(SO_BROADCAST)");
+		return result;
 	}
 	
 	result = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 	if (result < 0)
 	{
-		perror("socket.c setsockopt()");
+		perror("socket.c setsockopt(SO_REUSEADDR)");
 		return result;
 	}
 
-	result = fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (result == -1)
+	if (blocking == 0)
 	{
-		perror("socket.c fcntl()");
-		return result;
+		result = fcntl(fd, F_SETFL, O_NONBLOCK);
+		if (result == -1)
+		{
+			perror("socket.c fcntl(O_NONBLOCK)");
+			return result;
+		}
 	}
 
 	memset(&listen_addr, 0, sizeof(listen_addr));

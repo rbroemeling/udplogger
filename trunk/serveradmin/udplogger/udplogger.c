@@ -82,7 +82,7 @@ int main (int argc, char **argv)
 #endif
 
 	/* Set up the socket that will be used to send logging data. */
-	fd = bind_socket(conf.listen_port);
+	fd = bind_socket(conf.listen_port, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "udplogger.c could not setup logging socket\n");
