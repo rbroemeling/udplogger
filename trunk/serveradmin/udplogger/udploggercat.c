@@ -16,7 +16,7 @@
 
 int add_log_host(struct sockaddr_in *);
 int arguments_parse(int, char **);
-void *beacon_loop(void *);
+void *beacon_main(void *);
 void broadcast_scan();
 
 
@@ -53,7 +53,7 @@ struct udploggercat_configuration_t {
  *
  * DEFAULT_BEACON_INTERVAL               The default interval at which beacons should be dispatched.
  */
-#define DEFAULT_BEACON_INTERVAL               30UL
+#define DEFAULT_BEACON_INTERVAL          30UL
 
 
 /**
@@ -79,7 +79,7 @@ int main (int argc, char **argv)
 	printf("udploggercat.c debug: parameter beacon_interval = '%lu'\n", conf.beacon_interval);
 	while (debug_log_host_ptr)
 	{
-		printf("udploggercat.c debug: logging host %s:%u\n", inet_ntoa(debug_log_host_ptr->address.sin_addr), debug_log_host_ptr->address.sin_port);
+		printf("udploggercat.c debug: logging host %s:%u\n", inet_ntoa(debug_log_host_ptr->address.sin_addr), ntohs(debug_log_host_ptr->address.sin_port));
 		debug_log_host_ptr = debug_log_host_ptr->next;
 	}
 #endif
@@ -87,7 +87,7 @@ int main (int argc, char **argv)
 	/* Start our beacon thread. */
 	pthread_attr_init(&beacon_thread_attr);
 	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
-	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_loop, NULL);
+	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_main, NULL);
 	pthread_attr_destroy(&beacon_thread_attr);
 	if (result)
 	{
@@ -132,7 +132,7 @@ int add_log_host(struct sockaddr_in *sin)
 	log_host_ptr->address.sin_port = sin->sin_port;
 	
 #ifdef __DEBUG__
-	printf("udploggercat.c debug: added target %s:%hu\n", inet_ntoa(log_host_ptr->address.sin_addr), log_host_ptr->address.sin_port);
+	printf("udploggercat.c debug: added target %s:%hu\n", inet_ntoa(log_host_ptr->address.sin_addr), ntohs(log_host_ptr->address.sin_port));
 #endif
 
 	return 1;
@@ -264,7 +264,7 @@ int arguments_parse(int argc, char **argv)
 					{
 						sin.sin_family = hostent_ptr->h_addrtype;
 						sin.sin_addr.s_addr = ((struct in_addr *)(hostent_ptr->h_addr_list[j]))->s_addr;
-						sin.sin_port = uint_tmp;
+						sin.sin_port = htons(uint_tmp);
 						
 						add_log_host(&sin);
 					}
@@ -282,19 +282,74 @@ int arguments_parse(int argc, char **argv)
 		broadcast_scan();
 	}
 
+	if (conf.log_host.address.sin_family == 0)
+	{
+		/* Final sanity check.  If we don't have any log hosts to target, then don't continue. */
+		printf("udploggercat.c no log targets\n");
+		return -1;
+	}
+	
 	return 1;
 }
 
 
 /**
- * beacon_loop()
+ * beacon_main()
  *
  * The main thread loop for the beacon thread.  Creates a socket and sends beacon packets over it every
  * conf.beacon_interval.
  **/
-void *beacon_loop(void *arg)
+void *beacon_main(void *arg)
 {
+	char *beacon;
+	int fd;
+	struct log_host_t *log_host_ptr;
+	struct sockaddr_in sin;
+	int yes = 1;
+	
+	sin.sin_family = AF_INET;
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_port = htons(UDPLOGGER_DEFAULT_PORT);
 
+	beacon = calloc(BEACON_PACKET_SIZE, sizeof(char));
+	if (! beacon)
+	{
+		perror("udploggercat.c calloc()");
+		pthread_exit(NULL);
+	}
+	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
+	beacon[BEACON_PACKET_SIZE - 1] = '\0';
+
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (fd < 0)
+	{
+		perror("udploggercat.c socket()");
+		pthread_exit(NULL);
+	}
+
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &yes, sizeof(yes)) < 0)
+	{
+		perror("udploggercat.c setsockopt(SO_BROADCAST)");
+		pthread_exit(NULL);
+	}
+
+	if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) < 0)
+	{
+		perror("udploggercat.c bind()");
+		pthread_exit(NULL);
+	}
+
+	while (1)
+	{
+		log_host_ptr = &conf.log_host;
+		do
+		{
+			sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
+		} while ((log_host_ptr = log_host_ptr->next));
+		sleep(conf.beacon_interval);
+	}
+	
+	pthread_exit(NULL);	
 }
 
 
@@ -350,6 +405,15 @@ void broadcast_scan()
 #ifdef __DEBUG__
 		printf("udploggercat.c debug: found interface %s (%s)\n", ifr->ifr_name, inet_ntoa(((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr));
 #endif
+
+		if (ifr->ifr_addr.sa_family != AF_INET)
+		{
+#ifdef __DEBUG__
+			printf("udploggercat.c debug:   %s is not of the family AF_INET\n", ifr->ifr_name);
+#endif
+			continue;
+		}
+
 		if (ioctl(fd, SIOCGIFFLAGS, ifr) < 0)
 		{
 			perror("udploggercat.c ioctl(SIOCGIFFLAGS)");
@@ -400,7 +464,7 @@ void broadcast_scan()
 			continue;
 		}
 
-		sin.sin_port = UDPLOGGER_DEFAULT_PORT;
+		sin.sin_port = htons(UDPLOGGER_DEFAULT_PORT);
 		add_log_host(&sin);
 	}
 

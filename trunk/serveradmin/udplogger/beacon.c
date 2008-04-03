@@ -8,6 +8,7 @@
 #include "beacon.h"
 #include "socket.h"
 #include "udplogger.h"
+#include "udplogger.global.h"
 
 
 /**

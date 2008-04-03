@@ -34,12 +34,6 @@ struct log_target_t {
 /* Log packet format is:     [serial]   [tag]      [log data]. */
 #define PACKET_MAXIMUM_SIZE ((20 + 1) + (10 + 1) + INPUT_BUFFER_SIZE)
 
-
-/* Beacon packet format is: [beacon string]. */
-#define BEACON_PACKET_SIZE 32
-#define BEACON_STRING "UDPLOGGER BEACON"
-
-
 /* Global Variables (see udplogger.c). */
 extern struct udplogger_configuration_t conf;
 extern struct log_target_t *targets;
