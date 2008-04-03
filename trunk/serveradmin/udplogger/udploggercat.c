@@ -196,7 +196,7 @@ int arguments_parse(int argc, char **argv)
 				break;
 			case 'o':
 				char_ptr = strstr(optarg, ":");
-				if (! char_ptr || (char_ptr == optarg))
+				if (char_ptr == optarg)
 				{
 					fprintf(stderr, "udploggercat.c invalid host specification '%s'\n", optarg);
 					return -1;				
@@ -205,7 +205,14 @@ int arguments_parse(int argc, char **argv)
 				printf("udploggercat.c debug: parsing host target '%s'\n", optarg);
 #endif
 				
-				hostname_tmp = strndup(optarg, (char_ptr - optarg));
+				if (char_ptr)
+				{
+					hostname_tmp = strndup(optarg, (char_ptr - optarg));
+				}
+				else
+				{
+					hostname_tmp = strdup(optarg);
+				}
 				if (! hostname_tmp)
 				{
 					fprintf(stderr, "udploggercat.c could not allocate memory to record host '%s'\n", optarg);
@@ -215,10 +222,14 @@ int arguments_parse(int argc, char **argv)
 				printf("udploggercat.c debug:   determined hostname '%s'\n", hostname_tmp);
 #endif
 
-				char_ptr++;
-				if (char_ptr)
+				if (char_ptr && *char_ptr == ':')
 				{
-					uint_tmp = strtoumax(char_ptr, 0, 10);
+					char_ptr++;
+					uint_tmp = 0;
+					if (char_ptr)
+					{
+						uint_tmp = strtoumax(char_ptr, 0, 10);
+					}
 					if (! uint_tmp || uint_tmp == UINT_MAX)
 					{
 						fprintf(stderr, "udploggercat.c invalid port in host specification '%s'\n", optarg);
@@ -228,9 +239,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				else
 				{
-					fprintf(stderr, "udploggercat.c missing port in host specification '%s'\n", optarg);
-					free(hostname_tmp);
-					return -1;
+					uint_tmp = UDPLOGGER_DEFAULT_PORT;
 				}
 #ifdef __DEBUG__
 				printf("udploggercat.c debug:   determined port '%lu'\n", uint_tmp);
@@ -389,7 +398,7 @@ void broadcast_scan()
 #endif
 			continue;
 		}
-		
+
 		sin.sin_port = UDPLOGGER_DEFAULT_PORT;
 		add_log_host(&sin);
 	}
