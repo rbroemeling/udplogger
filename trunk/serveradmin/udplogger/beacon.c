@@ -48,7 +48,7 @@ void *beacon_main(void *arg)
 	while (1)
 	{
 		read_set = all_set;
-		result = select(1, &read_set, NULL, NULL, &timeout);
+		result = select(fd+1, &read_set, NULL, NULL, &timeout);
 		if (result < 0)
 		{
 			perror("beacon.c select()");
@@ -158,7 +158,7 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		{
 			current->beacon_timestamp = time(NULL);
 #ifdef __DEBUG__
-			printf("beacon.c debug: updated timestamp of target %s:%hu to %lu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port, current->beacon_timestamp);
+			printf("beacon.c debug: updated expiry of target %s:%hu to %lu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port, current->beacon_timestamp);
 #endif
 			return;
 		}
@@ -179,7 +179,7 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		current->beacon_timestamp = time(NULL);
 
 #ifdef __DEBUG__
-		printf("beacon.c debug: added target %s:%hu with timestamp %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
+		printf("beacon.c debug: added target %s:%hu with expiry %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
 #endif
 
 		pthread_mutex_lock(&targets_mutex);
