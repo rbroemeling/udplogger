@@ -20,10 +20,10 @@ int bind_socket(uint16_t listen_port, uint16_t blocking)
 	unsigned int yes = 1;
 	struct sockaddr_in listen_addr;
 	
-	fd = socket(AF_INET, SOCK_DGRAM, 0);
+	fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd < 0)
 	{
-		perror("socket.c socket(SOCK_DGRAM)");
+		perror("socket.c socket()");
 		return fd;
 	}
 	
@@ -46,15 +46,15 @@ int bind_socket(uint16_t listen_port, uint16_t blocking)
 		result = fcntl(fd, F_SETFL, O_NONBLOCK);
 		if (result == -1)
 		{
-			perror("socket.c fcntl(O_NONBLOCK)");
+			perror("socket.c fcntl()");
 			return result;
 		}
 	}
 
 	memset(&listen_addr, 0, sizeof(listen_addr));
 	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	listen_addr.sin_port = htons(listen_port);
+	listen_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	result = bind(fd, (struct sockaddr *) &listen_addr, sizeof(listen_addr));
 	if (result < 0)

@@ -102,7 +102,7 @@ void expire_log_targets()
 	{
 		if (current->beacon_timestamp < minimum_timestamp)
 		{
-			printf("beacon.c debug: removing target %s:%hu, expired at %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
+			printf("beacon.c debug: removing target %s:%hu, expired at %lu\n", inet_ntoa(current->address.sin_addr), ntohs(current->address.sin_port), current->beacon_timestamp);
 			if (current == targets)
 			{
 				pthread_mutex_lock(&targets_mutex);
@@ -141,7 +141,7 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 	struct log_target_t *current = NULL;
 	
 #ifdef __DEBUG__
-	printf("beacon.c debug: beacon received from %s:%hu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port);
+	printf("beacon.c debug: beacon received from %s:%hu\n", inet_ntoa(beacon_source->sin_addr), ntohs(beacon_source->sin_port));
 #endif
 
 	/*
@@ -158,7 +158,7 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		{
 			current->beacon_timestamp = time(NULL);
 #ifdef __DEBUG__
-			printf("beacon.c debug: updated expiry of target %s:%hu to %lu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port, current->beacon_timestamp);
+			printf("beacon.c debug: updated expiry of target %s:%hu to %lu\n", inet_ntoa(beacon_source->sin_addr), ntohs(beacon_source->sin_port), current->beacon_timestamp);
 #endif
 			return;
 		}
@@ -179,7 +179,7 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		current->beacon_timestamp = time(NULL);
 
 #ifdef __DEBUG__
-		printf("beacon.c debug: added target %s:%hu with expiry %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
+		printf("beacon.c debug: added target %s:%hu with expiry %lu\n", inet_ntoa(current->address.sin_addr), ntohs(current->address.sin_port), current->beacon_timestamp);
 #endif
 
 		pthread_mutex_lock(&targets_mutex);
@@ -207,7 +207,7 @@ void receive_beacons(int fd)
 	source_len = sizeof(source);
 	data_len = recvfrom(fd, data, BEACON_PACKET_SIZE, 0, (struct sockaddr *) &source, &source_len);
 #ifdef __DEBUG__
-	printf("beacon.c debug: received packet from %s:%hu\n", inet_ntoa(source.sin_addr), source.sin_port);
+	printf("beacon.c debug: received packet from %s:%hu\n", inet_ntoa(source.sin_addr), ntohs(source.sin_port));
 #endif
 	if (data_len > 0)
 	{
