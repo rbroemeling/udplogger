@@ -38,12 +38,12 @@ pthread_mutex_t targets_mutex;
  *
  * DEFAULT_LISTEN_PORT                   The default port to both listen on (for beacons) and send (logging data) from.
  * DEFAULT_MAXIMUM_TARGET_AGE            The default maximum age of a destination on the target list before it is removed.
- * DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL The default (maximum) interval between prunes of the target list.
+ * DEFAULT_PRUNE_TARGET_INTERVAL         The default interval between prunes of the target list.
  * DEFAULT_TAG                           The default string that outgoing log entries should be tagged with.
  */
 #define DEFAULT_LISTEN_PORT                   UDPLOGGER_DEFAULT_PORT
 #define DEFAULT_MAXIMUM_TARGET_AGE            120UL
-#define DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL 10L
+#define DEFAULT_PRUNE_TARGET_INTERVAL         10L
 #define DEFAULT_TAG                           ""
 
 
@@ -70,7 +70,7 @@ int main (int argc, char **argv)
 #ifdef __DEBUG__
 	printf("udplogger.c debug: parameter listen_port = '%u'\n", conf.listen_port);
 	printf("udplogger.c debug: parameter minimum_target_age = '%lu'\n", conf.maximum_target_age);
-	printf("udplogger.c debug: parameter prune_target_maximum_interval = '%ld'\n", conf.prune_target_maximum_interval);
+	printf("udplogger.c debug: parameter prune_target_interval = '%ld'\n", conf.prune_target_interval);
 	if (conf.tag)
 	{
 		printf("udplogger.c debug: parameter tag = '%s'\n", conf.tag);
@@ -125,7 +125,7 @@ int arguments_parse(int argc, char **argv)
 		{"help", no_argument, 0, 'h'},
 		{"listen", required_argument, 0, 'l'},
 		{"max_target_age", required_argument, 0, 'm'},
-		{"prune_target_maximum_interval", required_argument, 0, 'p'},
+		{"prune_target_interval", required_argument, 0, 'p'},
 		{"tag", required_argument, 0, 't'},
 		{"version", no_argument, 0, 'v'},
 		{0, 0, 0, 0}
@@ -136,7 +136,7 @@ int arguments_parse(int argc, char **argv)
 	/* Initialize our configuration to the default settings. */
 	conf.listen_port = DEFAULT_LISTEN_PORT;
 	conf.maximum_target_age = DEFAULT_MAXIMUM_TARGET_AGE;
-	conf.prune_target_maximum_interval = DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL;
+	conf.prune_target_interval = DEFAULT_PRUNE_TARGET_INTERVAL;
 	conf.tag = strdup(DEFAULT_TAG);
 	conf.tag_length = 0;
 
@@ -155,7 +155,7 @@ int arguments_parse(int argc, char **argv)
 				printf("  -h, --help                                     display this help and exit\n");
 				printf("  -l, --listen <port>                            listen for beacons on the given port (default %u)\n", DEFAULT_LISTEN_PORT);
 				printf("  -m, --max_target_age <age>                     expire log targets after <age> seconds (default %lu)\n", DEFAULT_MAXIMUM_TARGET_AGE);
-				printf("  -p, --prune_target_maximum_interval <interval> maximum interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_MAXIMUM_INTERVAL);
+				printf("  -p, --prune_target_interval <interval> interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_INTERVAL);
 				printf("  -t, --tag <tag>                                tag the loglines with the given identification prefix (default '%s')\n", DEFAULT_TAG);
 				printf("  -v, --version                                  display udplogger version and exit\n");
 				printf("\n");
@@ -190,10 +190,10 @@ int arguments_parse(int argc, char **argv)
 				long_tmp = strtol(optarg, 0, 10);
 				if (! long_tmp || long_tmp == LONG_MIN || long_tmp == LONG_MAX)
 				{
-					fprintf(stderr, "udplogger.c invalid prune target maximum interval argument '%s'\n", optarg);
+					fprintf(stderr, "udplogger.c invalid prune target interval argument '%s'\n", optarg);
 					return -1;
 				}
-				conf.prune_target_maximum_interval = long_tmp;
+				conf.prune_target_interval = long_tmp;
 				break;
 			case 't':
 				if (strlen(optarg) > 10)

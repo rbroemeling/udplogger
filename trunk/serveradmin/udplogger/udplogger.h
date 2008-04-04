@@ -9,7 +9,7 @@
 struct udplogger_configuration_t {
 	uint16_t listen_port;
 	uintmax_t maximum_target_age;
-	long prune_target_maximum_interval;
+	long prune_target_interval;
 	char *tag;
 	uint8_t tag_length;
 };

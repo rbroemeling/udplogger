@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -36,10 +37,10 @@ void *beacon_main(void *arg)
 	}
 	
 	/*
-	 * Configure our select timeout -- this is used to control the maximum time
+	 * Configure our select timeout -- this is used to control the time
 	 * between prunes of the target list.
 	 */
-	timeout.tv_sec = conf.prune_target_maximum_interval;
+	timeout.tv_sec = conf.prune_target_interval;
 	timeout.tv_usec = 0L;
 	
 	FD_ZERO(&all_set);
@@ -53,14 +54,19 @@ void *beacon_main(void *arg)
 			perror("beacon.c select()");
 			pthread_exit(NULL);
 		}
-		if (result > 0)
+		else if (result == 0)
+		{
+			timeout.tv_sec = conf.prune_target_interval;
+			timeout.tv_usec = 0L;
+			expire_log_targets();
+		}
+		else if (result > 0)
 		{
 			if (FD_ISSET(fd, &read_set))
 			{
 				receive_beacons(fd);
 			}
 		}
-		expire_log_targets();
 	}
 	pthread_exit(NULL);
 }
@@ -87,11 +93,16 @@ void expire_log_targets()
 	}
 	minimum_timestamp = minimum_timestamp - conf.maximum_target_age;
 
+#ifdef __DEBUG__
+	printf("beacon.c debug: expiring log targets older than %lu\n", minimum_timestamp);
+#endif
+
 	current = targets;
 	while (current)
 	{
 		if (current->beacon_timestamp < minimum_timestamp)
 		{
+			printf("beacon.c debug: removing target %s:%hu, expired at %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
 			if (current == targets)
 			{
 				pthread_mutex_lock(&targets_mutex);
@@ -129,6 +140,10 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 {
 	struct log_target_t *current = NULL;
 	
+#ifdef __DEBUG__
+	printf("beacon.c debug: beacon received from %s:%hu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port);
+#endif
+
 	/*
 	 * Check to see if we currently know about this target, and if we do update its beacon timestamp and then return.
 	 *
@@ -142,6 +157,9 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		if ((beacon_source->sin_addr.s_addr == current->address.sin_addr.s_addr) && (beacon_source->sin_port == current->address.sin_port))
 		{
 			current->beacon_timestamp = time(NULL);
+#ifdef __DEBUG__
+			printf("beacon.c debug: updated timestamp of target %s:%hu to %lu\n", inet_ntoa(beacon_source->sin_addr), beacon_source->sin_port, current->beacon_timestamp);
+#endif
 			return;
 		}
 		current = current->next;
@@ -159,6 +177,10 @@ void receive_beacon(struct sockaddr_in *beacon_source)
 		current->address.sin_addr.s_addr = beacon_source->sin_addr.s_addr;
 		current->address.sin_port = beacon_source->sin_port;
 		current->beacon_timestamp = time(NULL);
+
+#ifdef __DEBUG__
+		printf("beacon.c debug: added target %s:%hu with timestamp %lu\n", inet_ntoa(current->address.sin_addr), current->address.sin_port, current->beacon_timestamp);
+#endif
 
 		pthread_mutex_lock(&targets_mutex);
 		current->next = targets;
@@ -184,6 +206,9 @@ void receive_beacons(int fd)
 	
 	source_len = sizeof(source);
 	data_len = recvfrom(fd, data, BEACON_PACKET_SIZE, 0, (struct sockaddr *) &source, &source_len);
+#ifdef __DEBUG__
+	printf("beacon.c debug: received packet from %s:%hu\n", inet_ntoa(source.sin_addr), source.sin_port);
+#endif
 	if (data_len > 0)
 	{
 		if (strncmp((char *)data, BEACON_STRING, BEACON_PACKET_SIZE) == 0)
