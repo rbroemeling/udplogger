@@ -4,7 +4,6 @@
 #include <net/if.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +16,6 @@
 
 int add_log_host(struct sockaddr_in *);
 int arguments_parse(int, char **);
-void *beacon_main(void *);
 void broadcast_scan();
 
 
@@ -65,14 +63,16 @@ struct udploggercat_configuration_t {
  **/
 int main (int argc, char **argv)
 {
-	pthread_t beacon_thread;
-	pthread_attr_t beacon_thread_attr;
+	fd_set all_set;
+	char *beacon;
 	char *buffer;
-	struct log_host_t *debug_log_host_ptr = &conf.log_host;
+	struct log_host_t *log_host_ptr;
 	int fd;
+	fd_set read_set;
 	int result = 0;
 	struct sockaddr_in sender;
 	socklen_t senderlen = sizeof(sender);
+	struct timeval timeout;
 
 	result = arguments_parse(argc, argv);
 	if (result <= 0)
@@ -82,18 +82,18 @@ int main (int argc, char **argv)
 
 #ifdef __DEBUG__
 	printf("udploggercat.c debug: parameter beacon_interval = '%lu'\n", conf.beacon_interval);
-	while (debug_log_host_ptr)
+	log_host_ptr = &conf.log_host;
+	while (log_host_ptr)
 	{
-		printf("udploggercat.c debug: logging host %s:%u\n", inet_ntoa(debug_log_host_ptr->address.sin_addr), ntohs(debug_log_host_ptr->address.sin_port));
-		debug_log_host_ptr = debug_log_host_ptr->next;
+		printf("udploggercat.c debug: logging host %s:%u\n", inet_ntoa(log_host_ptr->address.sin_addr), ntohs(log_host_ptr->address.sin_port));
+		log_host_ptr = log_host_ptr->next;
 	}
 #endif
 
-	/* Set up the socket that will be used to read logging data. */
-	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 1);
+	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 0);
 	if (fd < 0)
 	{
-		fprintf(stderr, "udploggercat.c could not setup logging socket\n");
+		fprintf(stderr, "udploggercat.c could not setup socket\n");
 		return -1;
 	}
 
@@ -104,28 +104,54 @@ int main (int argc, char **argv)
 		return -1;
 	}
 
-	/* Start our beacon thread. */
-	pthread_attr_init(&beacon_thread_attr);
-	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
-	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_main, NULL);
-	pthread_attr_destroy(&beacon_thread_attr);
-	if (result)
+	beacon = calloc(BEACON_PACKET_SIZE, sizeof(char));
+	if (! beacon)
 	{
-		fprintf(stderr, "udploggercat.c could not start beacon thread.\n");
+		perror("udploggercat.c calloc(beacon)");
 		return -1;
 	}
+	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
+	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
+	memset(&timeout, 0, sizeof(timeout));
+
+	FD_ZERO(&all_set);
+	FD_SET(fd, &all_set);
 	while (1)
 	{
-		if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
+		read_set = all_set;
+		result = select(fd+1, &read_set, NULL, NULL, &timeout);
+		if (result < 0)
 		{
-			buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
-			printf("[%s:%hu] %s\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port), buffer);
+			perror("udploggercat.c select()");
+			return -1;
+		}
+		else if (result == 0)
+		{
+			timeout.tv_sec = conf.beacon_interval;
+			timeout.tv_usec = 0L;
+			log_host_ptr = &conf.log_host;
+			do
+			{
+				sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
+			} while ((log_host_ptr = log_host_ptr->next));
+		}
+		else if (result > 0)
+		{
+			if (FD_ISSET(fd, &read_set))
+			{
+				if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
+				{
+					buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
+					printf("[%s:%hu] %s\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port), buffer);
+				}
+			}
 		}
 	}
-	exit(0);
-}
 
+	return 0;
+}
+	
 
 /**
  * add_log_host(sin)
@@ -321,49 +347,7 @@ int arguments_parse(int argc, char **argv)
 
 
 /**
- * beacon_main()
- *
- * The main thread loop for the beacon thread.  Creates a socket and sends beacon packets over it every
- * conf.beacon_interval.
- **/
-void *beacon_main(void *arg)
-{
-	char *beacon;
-	int fd;
-	struct log_host_t *log_host_ptr;
-
-	beacon = calloc(BEACON_PACKET_SIZE, sizeof(char));
-	if (! beacon)
-	{
-		perror("udploggercat.c calloc(beacon)");
-		pthread_exit(NULL);
-	}
-	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
-	beacon[BEACON_PACKET_SIZE - 1] = '\0';
-
-	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 0);
-	if (fd < 0)
-	{
-		fprintf(stderr, "udploggercat.c could not setup beacon socket\n");
-		pthread_exit(NULL);
-	}
-
-	while (1)
-	{
-		log_host_ptr = &conf.log_host;
-		do
-		{
-			sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
-		} while ((log_host_ptr = log_host_ptr->next));
-		sleep(conf.beacon_interval);
-	}
-	
-	pthread_exit(NULL);	
-}
-
-
-/**
- * broadcast_Scan()
+ * broadcast_scan()
  *
  * Iterates through all interfaces on the system and adds all broadcast addresses found to the
  * conf.log_host list.
