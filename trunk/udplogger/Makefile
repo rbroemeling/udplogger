@@ -5,7 +5,7 @@ CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION} -D__DEBUG__=1
 LDLIBS=-lz -pthread
 
 
-all: udplogger udploggercat
+all: udploggerd udploggercat
 
 clean:
 	rm -f *.o
@@ -15,11 +15,11 @@ pristine: realclean
 proper: realclean
 
 realclean: clean
-	rm -f udplogger
+	rm -f udploggerd
 	rm -f udploggercat
 
 rebuild: realclean all
 
-udplogger: beacon.o socket.o trim.o udplogger.o
+udploggerd: beacon.o socket.o trim.o udploggerd.o
 
 udploggercat: udploggercat.o socket.o

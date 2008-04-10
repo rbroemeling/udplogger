@@ -13,7 +13,7 @@
 #include "beacon.h"
 #include "socket.h"
 #include "trim.h"
-#include "udplogger.h"
+#include "udploggerd.h"
 #include "udplogger.global.h"
 
 
@@ -28,7 +28,7 @@ void logging_loop(int);
  * targets       is used to store the list of destinations that this process is currently sending data to.
  * targets_mutex is a mutex used to control access to the targets variable across threads.
  */
-struct udplogger_configuration_t conf;
+struct udploggerd_configuration_t conf;
 struct log_target_t *targets = NULL;
 pthread_mutex_t targets_mutex;
 
@@ -68,16 +68,16 @@ int main (int argc, char **argv)
 	}
 
 #ifdef __DEBUG__
-	printf("udplogger.c debug: parameter listen_port = '%u'\n", conf.listen_port);
-	printf("udplogger.c debug: parameter minimum_target_age = '%lu'\n", conf.maximum_target_age);
-	printf("udplogger.c debug: parameter prune_target_interval = '%ld'\n", conf.prune_target_interval);
+	printf("udploggerd.c debug: parameter listen_port = '%u'\n", conf.listen_port);
+	printf("udploggerd.c debug: parameter minimum_target_age = '%lu'\n", conf.maximum_target_age);
+	printf("udploggerd.c debug: parameter prune_target_interval = '%ld'\n", conf.prune_target_interval);
 	if (conf.tag)
 	{
-		printf("udplogger.c debug: parameter tag = '%s'\n", conf.tag);
+		printf("udploggerd.c debug: parameter tag = '%s'\n", conf.tag);
 	}
 	else
 	{
-		printf("udplogger.c debug: parameter tag = NULL\n");
+		printf("udploggerd.c debug: parameter tag = NULL\n");
 	}
 #endif
 
@@ -85,7 +85,7 @@ int main (int argc, char **argv)
 	fd = bind_socket(conf.listen_port, 0);
 	if (fd < 0)
 	{
-		fprintf(stderr, "udplogger.c could not setup logging socket\n");
+		fprintf(stderr, "udploggerd.c could not setup logging socket\n");
 		return -1;
 	}
 	
@@ -99,7 +99,7 @@ int main (int argc, char **argv)
 	pthread_attr_destroy(&beacon_thread_attr);
 	if (result)
 	{
-		fprintf(stderr, "udplogger.c could not start beacon thread.\n");
+		fprintf(stderr, "udploggerd.c could not start beacon thread.\n");
 		return -1;
 	}
 	
@@ -164,7 +164,7 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX)
 				{
-					fprintf(stderr, "udplogger.c invalid listen port argument '%s'\n", optarg);
+					fprintf(stderr, "udploggerd.c invalid listen port argument '%s'\n", optarg);
 					return -1;
 				}
 				if (uint_tmp > 0 && uint_tmp <= 0xFFFF)
@@ -173,7 +173,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				else
 				{
-					fprintf(stderr, "udplogger.c listen argument %lu is out of port range (1-65535)\n", uint_tmp);
+					fprintf(stderr, "udploggerd.c listen argument %lu is out of port range (1-65535)\n", uint_tmp);
 					return -1;
 				}
 				break;
@@ -181,7 +181,7 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX)
 				{
-					fprintf(stderr, "udplogger.c invalid maximum target age argument '%s'\n", optarg);
+					fprintf(stderr, "udploggerd.c invalid maximum target age argument '%s'\n", optarg);
 					return -1;
 				}
 				conf.maximum_target_age = uint_tmp;
@@ -190,7 +190,7 @@ int arguments_parse(int argc, char **argv)
 				long_tmp = strtol(optarg, 0, 10);
 				if (! long_tmp || long_tmp == LONG_MIN || long_tmp == LONG_MAX)
 				{
-					fprintf(stderr, "udplogger.c invalid prune target interval argument '%s'\n", optarg);
+					fprintf(stderr, "udploggerd.c invalid prune target interval argument '%s'\n", optarg);
 					return -1;
 				}
 				conf.prune_target_interval = long_tmp;
@@ -198,7 +198,7 @@ int arguments_parse(int argc, char **argv)
 			case 't':
 				if (strlen(optarg) > 10)
 				{
-					fprintf(stderr, "udplogger.c tag '%s' is too long, maximum length is 10 characters\n", optarg);
+					fprintf(stderr, "udploggerd.c tag '%s' is too long, maximum length is 10 characters\n", optarg);
 					return -1;
 				}
 				if (conf.tag)
@@ -207,7 +207,7 @@ int arguments_parse(int argc, char **argv)
 				}
 				conf.tag = strdup(optarg);
 			case 'v':
-				printf("udplogger.c revision r%d\n", REVISION);
+				printf("udploggerd.c revision r%d\n", REVISION);
 				return 0;
 		}
 	}

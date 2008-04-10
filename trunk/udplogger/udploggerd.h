@@ -1,12 +1,12 @@
-#ifndef __UDPLOGGER_H__
-#define __UDPLOGGER_H__
+#ifndef __UDPLOGGERD_H__
+#define __UDPLOGGERD_H__
 
 
 /*
  * Structure that contains configuration information for the running instance
  * of udplogger.
  */
-struct udplogger_configuration_t {
+struct udploggerd_configuration_t {
 	uint16_t listen_port;
 	uintmax_t maximum_target_age;
 	long prune_target_interval;
@@ -26,8 +26,8 @@ struct log_target_t {
 	struct log_target_t *next;
 };
 
-/* Global Variables (see udplogger.c). */
-extern struct udplogger_configuration_t conf;
+/* Global Variables (see udploggerd.c). */
+extern struct udploggerd_configuration_t conf;
 extern struct log_target_t *targets;
 extern pthread_mutex_t targets_mutex;
 
