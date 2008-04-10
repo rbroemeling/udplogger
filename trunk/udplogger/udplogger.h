@@ -1,5 +1,5 @@
-#ifndef __UDPLOGGER_GLOBAL_H__
-#define __UDPLOGGER_GLOBAL_H__
+#ifndef __UDPLOGGER_H__
+#define __UDPLOGGER_H__
 
 /* Beacon packet format is: [beacon string]. */
 #define BEACON_PACKET_SIZE 32
@@ -12,6 +12,6 @@
 #define PACKET_MAXIMUM_SIZE ((20 + 1) + (10 + 1) + INPUT_BUFFER_SIZE)
 
 /* The default port that udplogger will use to communicate. */
-#define UDPLOGGER_DEFAULT_PORT                   43824U
+#define UDPLOGGER_DEFAULT_PORT 43824U
 
 #endif

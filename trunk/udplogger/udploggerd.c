@@ -12,9 +12,9 @@
 #include <string.h>
 #include "beacon.h"
 #include "socket.h"
+#include "udplogger.h"
 #include "trim.h"
 #include "udploggerd.h"
-#include "udplogger.global.h"
 
 
 int arguments_parse(int, char **);

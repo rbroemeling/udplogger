@@ -10,8 +10,8 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include "udplogger.h"
 #include "socket.h"
-#include "udplogger.global.h"
 
 
 int add_log_host(struct sockaddr_in *);
