@@ -3,12 +3,10 @@
 #include <inttypes.h>
 #include <net/if.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <unistd.h>
 #include "udplogger.h"
 #include "socket.h"
@@ -154,7 +152,7 @@ int main (int argc, char **argv)
 	
 
 /**
- * add_log_host(sin)
+ * add_log_host(<log host sockaddr_in>)
  *
  * Simple utility function to take the host designated by sin and add it to the list
  * of log hosts.  Returns 1 for success and 0 for failure.
