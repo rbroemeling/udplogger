@@ -11,7 +11,7 @@
  * file descriptor for it.  The descriptor that is returned has SO_BROADCAST and SO_REUSEADDR
  * set.  If the blocking flag is zero then the descriptor returned is non-blocking.
  *
- * On error returns a negative file descriptor representing the error code encountered.
+ * On error returns a negative value representing the error code encountered.
  **/
 int bind_socket(uint16_t listen_port, uint16_t blocking)
 {
