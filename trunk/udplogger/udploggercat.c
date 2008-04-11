@@ -154,7 +154,7 @@ int main (int argc, char **argv)
 /**
  * add_log_host(<log host sockaddr_in>)
  *
- * Simple utility function to take the host designated by sin and add it to the list
+ * Simple utility function to take the host designated and add it to the list
  * of log hosts.  Returns 1 for success and 0 for failure.
  **/
 int add_log_host(struct sockaddr_in *sin)
