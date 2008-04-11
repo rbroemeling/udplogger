@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 #include "udplogger.h"
 #include "socket.h"
@@ -15,6 +16,7 @@
 int add_log_host(struct sockaddr_in *);
 int arguments_parse(int, char **);
 void broadcast_scan();
+void print_time();
 
 
 /*
@@ -111,7 +113,7 @@ int main (int argc, char **argv)
 	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
 	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
-	memset(&timeout, 0, sizeof(timeout));
+	memset(&timeout, 0, sizeof(timeout));	
 
 	FD_ZERO(&all_set);
 	FD_SET(fd, &all_set);
@@ -141,7 +143,8 @@ int main (int argc, char **argv)
 				if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
 				{
 					buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
-					printf("[%s:%hu] %s\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port), buffer);
+					print_time();
+					printf(" [%s:%hu] %s\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port), buffer);
 				}
 			}
 		}
@@ -463,4 +466,37 @@ void broadcast_scan()
 	{
 		perror("udploggercat.c close()");
 	}
+}
+
+
+/**
+ * print_time()
+ *
+ * Simple utility function to print the current date and time to the console.
+ * Caches time strings so that it does not have to call strftime() with each call.
+ **/
+#define TIME_STRING_BUFFER_SIZE 40
+void print_time()
+{
+	static time_t current_timestamp = 0;
+	static struct tm current_time;
+	static char current_time_str[TIME_STRING_BUFFER_SIZE];
+	
+	if ((! current_timestamp) || (current_timestamp != time(NULL)))
+	{
+		current_timestamp = time(NULL);
+		if (current_timestamp == (time_t)-1)
+		{
+			perror("udploggercat.c time()");
+			return;
+		}
+		if (localtime_r(&current_timestamp, &current_time) == NULL)
+		{
+			perror("udploggercat.c localtime_r()");
+			return;
+		}
+		strftime(current_time_str, TIME_STRING_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &current_time);
+		current_time_str[TIME_STRING_BUFFER_SIZE - 1] = '\0';
+	}
+	printf("%s", current_time_str);
 }
