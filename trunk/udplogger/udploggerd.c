@@ -155,7 +155,7 @@ int arguments_parse(int argc, char **argv)
 				printf("  -h, --help                                     display this help and exit\n");
 				printf("  -l, --listen <port>                            listen for beacons on the given port (default %u)\n", DEFAULT_LISTEN_PORT);
 				printf("  -m, --max_target_age <age>                     expire log targets after <age> seconds (default %lu)\n", DEFAULT_MAXIMUM_TARGET_AGE);
-				printf("  -p, --prune_target_interval <interval> interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_INTERVAL);
+				printf("  -p, --prune_target_interval <interval>         interval in seconds between prunes of the log target list (default %ld)\n", DEFAULT_PRUNE_TARGET_INTERVAL);
 				printf("  -t, --tag <tag>                                tag the loglines with the given identification prefix (default '%s')\n", DEFAULT_TAG);
 				printf("  -v, --version                                  display udplogger version and exit\n");
 				printf("\n");
@@ -206,6 +206,7 @@ int arguments_parse(int argc, char **argv)
 					free(conf.tag);
 				}
 				conf.tag = strdup(optarg);
+				break;
 			case 'v':
 				printf("udploggerd.c revision r%d\n", REVISION);
 				return 0;
