@@ -1,7 +1,7 @@
 REVISION=${shell svn info . | grep '^Revision: ' | sed -e 's/[^0-9]//g'}
 
 CC=gcc
-CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION} -D__DEBUG__
+CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
 LDLIBS=-lz -pthread
 
 

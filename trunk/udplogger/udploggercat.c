@@ -475,7 +475,7 @@ void broadcast_scan()
  * Simple utility function to print the current date and time to the console.
  * Caches time strings so that it does not have to call strftime() with each call.
  **/
-#define TIME_STRING_BUFFER_SIZE 40
+#define TIME_STRING_BUFFER_SIZE 40U
 void print_time()
 {
 	static time_t current_timestamp = 0;
