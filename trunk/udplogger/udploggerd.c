@@ -95,7 +95,7 @@ int main (int argc, char **argv)
 	/* Start our beacon-listener thread. */
 	pthread_attr_init(&beacon_thread_attr);
 	pthread_attr_setdetachstate(&beacon_thread_attr, PTHREAD_CREATE_DETACHED);
-	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_main, NULL);
+	result = pthread_create(&beacon_thread, &beacon_thread_attr, beacon_main, (void *)&fd);
 	pthread_attr_destroy(&beacon_thread_attr);
 	if (result)
 	{

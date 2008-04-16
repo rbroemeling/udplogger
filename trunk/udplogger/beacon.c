@@ -13,28 +13,20 @@
 
 
 /**
- * beacon_main()
+ * beacon_main(<fd_ptr>)
  *
  * The main thread loop for the beacon-listening thread.  Creates a socket to listen on
  * and then enters a loop waiting for input.  Beacons are expired/cleaned at the end of each
  * loop; which means that they are cleaned whenever beacon packet(s) are received or when the
  * select timeout elapses (which upper-bounds how often the list of targets is cleaned).
  **/
-void *beacon_main(void *arg)
+void *beacon_main(void *fd_ptr)
 {
 	fd_set all_set;
-	int fd;
+	int fd = *(int *)fd_ptr;
 	fd_set read_set;
 	int result = 0;
 	struct timeval timeout;
-
-	/* Set up the read-only socket that will be used to listen for beacons. */
-	fd = bind_socket(conf.listen_port, 0);
-	if (fd < 0)
-	{
-		fprintf(stderr, "beacon.c could not setup beacon-listener socket\n");
-		pthread_exit(NULL);
-	}
 	
 	/*
 	 * Configure our select timeout -- this is used to control the time
