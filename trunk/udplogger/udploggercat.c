@@ -90,7 +90,7 @@ int main (int argc, char **argv)
 	}
 #endif
 
-	fd = bind_socket(UDPLOGGER_DEFAULT_PORT, 0);
+	fd = bind_socket(0, 0);
 	if (fd < 0)
 	{
 		fprintf(stderr, "udploggercat.c could not setup socket\n");
