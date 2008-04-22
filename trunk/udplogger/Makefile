@@ -33,4 +33,4 @@ source-package:
 
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 
-udploggercat: udploggercat.o socket.o
+udploggercat: udploggerclientlib.o udploggercat.o socket.o
