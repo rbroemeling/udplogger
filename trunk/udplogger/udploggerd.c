@@ -1,7 +1,7 @@
 /*
  * Usage (lighttpd):
- *   accesslog.format = "%m %>s %B %T \"%U\" \"%q\" \"%a\" \"%{User-agent}i\" \"%{X-Forwarded-For}i\" \"%{X-LIGHTTPD-userid}o\" \"%{X-LIGHTTPD-age}o\" \"%{X-LIGHTTPD-sex}o\" \"%{X-LIGHTTPD-loc}o\" \"%{X-LIGHTTPD-usertype}o\""
- *   accesslog.filename = "|/path/to/udplogger -l <listen port> -t <tag>"
+ *   accesslog.filename = "|/path/to/udploggerd -l <listen port> -t <tag>"
+  * See udplogger.h for the suggested accesslog.format string.
  */
 #include <getopt.h>
 #include <inttypes.h>
