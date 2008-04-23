@@ -71,10 +71,9 @@ void broadcast_scan();
  *
  * There is no implementation of this function in this file.  This function should be implemented in each
  * udploggerd client program, and should take the arguments sockaddr_in *sender (the source host of the log line)
- * and char *line (the log line data itself).  The hook function should not modify the data in either of those
- * arguments.
+ * and char *line (the log line data itself).
  **/
-extern void inline log_packet_hook(const struct sockaddr_in *, const char *);
+extern void inline log_packet_hook(struct sockaddr_in *, char *);
 
 
 /**
