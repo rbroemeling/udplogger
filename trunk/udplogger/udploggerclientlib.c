@@ -29,7 +29,7 @@
  * Give a strndup prototype to stop compiler warnings.  GNU libraries give it to us,
  * but ISO C90 doesn't allow us to use _GNU_SOURCE before including <string.h>.
  */
-char *strndup(const char *s, size_t n);
+char *strndup(const char *, size_t);
 
 
 /*
@@ -45,12 +45,12 @@ struct log_host_t {
 
 /*
  * Structure that contains configuration information for the running instance
- * of this udplogger client.
+ * of this udplogger library.
  */
 struct udploggerclientlib_configuration_t {
 	uintmax_t beacon_interval;
 	struct log_host_t log_host;
-} clientlib_conf;
+} udploggerclientlib_conf;
 
 
 /*
@@ -86,8 +86,8 @@ extern void inline log_packet_hook(const struct sockaddr_in *, const char *);
 int main (int argc, char **argv)
 {
 	fd_set all_set;
-	char *beacon;
-	char *buffer;
+	char beacon[BEACON_PACKET_SIZE];
+	char buffer[PACKET_MAXIMUM_SIZE];
 	struct log_host_t *log_host_ptr;
 	int fd;
 	fd_set read_set;
@@ -103,8 +103,8 @@ int main (int argc, char **argv)
 	}
 
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug: parameter beacon_interval = '%lu'\n", clientlib_conf.beacon_interval);
-	log_host_ptr = &clientlib_conf.log_host;
+	printf("udploggerclientlib.c debug: parameter beacon_interval = '%lu'\n", udploggerclientlib_conf.beacon_interval);
+	log_host_ptr = &udploggerclientlib_conf.log_host;
 	while (log_host_ptr)
 	{
 		printf("udploggerclientlib.c debug: logging host %s:%u\n", inet_ntoa(log_host_ptr->address.sin_addr), ntohs(log_host_ptr->address.sin_port));
@@ -119,19 +119,6 @@ int main (int argc, char **argv)
 		return -1;
 	}
 
-	buffer = calloc(PACKET_MAXIMUM_SIZE, sizeof(char));
-	if (! buffer)
-	{
-		perror("udploggerclientlib.c calloc(buffer)");
-		return -1;
-	}
-
-	beacon = calloc(BEACON_PACKET_SIZE, sizeof(char));
-	if (! beacon)
-	{
-		perror("udploggerclientlib.c calloc(beacon)");
-		return -1;
-	}
 	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
 	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
@@ -150,9 +137,9 @@ int main (int argc, char **argv)
 		}
 		else if (result == 0)
 		{
-			timeout.tv_sec = clientlib_conf.beacon_interval;
+			timeout.tv_sec = udploggerclientlib_conf.beacon_interval;
 			timeout.tv_usec = 0L;
-			log_host_ptr = &clientlib_conf.log_host;
+			log_host_ptr = &udploggerclientlib_conf.log_host;
 			do
 			{
 				sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
@@ -185,7 +172,7 @@ int add_log_host(struct sockaddr_in *sin)
 {
 	struct log_host_t *log_host_ptr;
 	
-	log_host_ptr = &clientlib_conf.log_host;
+	log_host_ptr = &udploggerclientlib_conf.log_host;
 	while (log_host_ptr->next)
 	{
 		log_host_ptr = log_host_ptr->next;
@@ -239,8 +226,8 @@ int arguments_parse(int argc, char **argv)
 	uintmax_t uint_tmp;
 	
 	/* Initialize our configuration to the default settings. */
-	clientlib_conf.beacon_interval = DEFAULT_BEACON_INTERVAL;
-	memset(&clientlib_conf.log_host, 0, sizeof(clientlib_conf.log_host));
+	udploggerclientlib_conf.beacon_interval = DEFAULT_BEACON_INTERVAL;
+	memset(&udploggerclientlib_conf.log_host, 0, sizeof(udploggerclientlib_conf.log_host));
 	
 	while (1)
 	{	
@@ -268,7 +255,7 @@ int arguments_parse(int argc, char **argv)
 					fprintf(stderr, "udploggerclientlib.c invalid beacon interval '%s'\n", optarg);
 					return -1;
 				}
-				clientlib_conf.beacon_interval = uint_tmp;
+				udploggerclientlib_conf.beacon_interval = uint_tmp;
 				break;
 			case 'o':
 				char_ptr = strstr(optarg, ":");
@@ -351,13 +338,13 @@ int arguments_parse(int argc, char **argv)
 		}
 	}
 
-	if (clientlib_conf.log_host.address.sin_family == 0)
+	if (udploggerclientlib_conf.log_host.address.sin_family == 0)
 	{
 		/* No target hosts have been passed in.  Default is to add all broadcast addresses. */
 		broadcast_scan();
 	}
 
-	if (clientlib_conf.log_host.address.sin_family == 0)
+	if (udploggerclientlib_conf.log_host.address.sin_family == 0)
 	{
 		/* Final sanity check.  If we don't have any log hosts to target, then don't continue. */
 		printf("udploggerclientlib.c no log targets\n");
@@ -372,7 +359,7 @@ int arguments_parse(int argc, char **argv)
  * broadcast_scan()
  *
  * Iterates through all interfaces on the system and adds all broadcast addresses found to the
- * clientlib_conf.log_host list.
+ * udploggerclientlib_conf.log_host list.
  **/
 void broadcast_scan()
 {
@@ -385,7 +372,7 @@ void broadcast_scan()
 	int num_interfaces = 0; /* The number of interfaces that we have actually found. */
 	struct sockaddr_in sin;
 
-	log_host_ptr = &clientlib_conf.log_host;
+	log_host_ptr = &udploggerclientlib_conf.log_host;
 
 	ifc.ifc_len = max_interfaces * sizeof(struct ifreq);
 
