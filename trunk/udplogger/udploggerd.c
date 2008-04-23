@@ -267,7 +267,7 @@ void logging_loop(int fd)
 
 		output_buffer_idx = 0;
 
-		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%lu ", log_serial);
+		result = snprintf(&output_buffer[output_buffer_idx], (PACKET_MAXIMUM_SIZE - output_buffer_idx), "%lu%c", log_serial, DELIMITER_CHARACTER);
 		if (result >= (PACKET_MAXIMUM_SIZE - output_buffer_idx))
 		{
 			output_buffer_idx += PACKET_MAXIMUM_SIZE - output_buffer_idx - 1;
@@ -282,7 +282,7 @@ void logging_loop(int fd)
 			memcpy(&output_buffer[output_buffer_idx], conf.tag, conf.tag_length);
 			output_buffer_idx += conf.tag_length;
 
-			output_buffer[output_buffer_idx] = ' ';
+			output_buffer[output_buffer_idx] = DELIMITER_CHARACTER;
 			output_buffer_idx++;
 		}
 

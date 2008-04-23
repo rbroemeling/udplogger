@@ -18,6 +18,9 @@
  *   accesslog.format = "%m%s%b%I%O%T%X%U%q%h%{User-agent}i%{X-Forwarded-For}i%{Referer}i%{X-LIGHTTPD-userid}o%{X-LIGHTTPD-age}o%{X-LIGHTTPD-sex}o%{X-LIGHTTPD-loc}o%{X-LIGHTTPD-usertype}o"
  */
 
+/* The character to be used to delimit log fields.  We use U+001E, decimal 30, octal 036 (the information/record separator character). */
+#define DELIMITER_CHARACTER 30U
+
 /* The default port that udplogger will use to communicate. */
 #define UDPLOGGER_DEFAULT_PORT 43824U
 
