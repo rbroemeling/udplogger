@@ -196,9 +196,9 @@ int arguments_parse(int argc, char **argv)
 				conf.prune_target_interval = long_tmp;
 				break;
 			case 't':
-				if (strlen(optarg) > 10)
+				if (strlen(optarg) > TAG_MAXIMUM_LENGTH)
 				{
-					fprintf(stderr, "udploggerd.c tag '%s' is too long, maximum length is 10 characters\n", optarg);
+					fprintf(stderr, "udploggerd.c tag '%s' is too long, maximum length is %d characters\n", optarg, TAG_MAXIMUM_LENGTH);
 					return -1;
 				}
 				if (conf.tag)

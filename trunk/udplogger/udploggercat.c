@@ -105,7 +105,6 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 
 void usage_hook()
 {
-	printf("  -d, --delimiter            set the delimiter to be used in-between log fields\n");
+	printf("  -d, --delimiter <delim>    set the delimiter to be used in-between log fields\n");
 	printf("                             (defaults to character 0x%x)\n", DELIMITER_CHARACTER);
 }
-
