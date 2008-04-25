@@ -38,7 +38,7 @@ void usage_hook();
 
 int add_option_hook()
 {
-	udploggercat_conf.delimiter_character = ' ';
+	udploggercat_conf.delimiter_character = DELIMITER_CHARACTER;
 	return add_option("delimiter", required_argument, 'd');
 }
 
@@ -106,6 +106,6 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 void usage_hook()
 {
 	printf("  -d, --delimiter            set the delimiter to be used in-between log fields\n");
-	printf("                             (defaults to ' ' [space])\n");
+	printf("                             (defaults to character 0x%x)\n", DELIMITER_CHARACTER);
 }
 
