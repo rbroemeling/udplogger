@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include "udplogger.h"
+#include "udploggerclientlib.h"
 #include "socket.h"
 
 
@@ -62,25 +63,20 @@ struct udploggerclientlib_configuration_t {
 
 
 int add_log_host(struct sockaddr_in *);
+int add_option(const char *, const int, const char);
 int arguments_parse(int, char **);
 void broadcast_scan();
 
 
-/**
- * log_packet_hook(<source host>, <log line>)
- *
- * There is no implementation of this function in this file.  This function should be implemented in each
- * udploggerd client program, and should take the arguments sockaddr_in *sender (the source host of the log line)
- * and char *line (the log line data itself).
- **/
-extern void inline log_packet_hook(struct sockaddr_in *, char *);
+static struct option *long_options = NULL;
+char *short_options = NULL;
 
 
 /**
  * main()
  *
- * Initializes the program configuration and state, then starts the beacon thread before
- * finally entering the main loop that reads log entries and dumps them to stdout.
+ * Initializes the program configuration and state, then enters a main loop that reads log entries
+ * (calling the log_packet_hook function on each) and sends beacon packets.
  **/
 int main (int argc, char **argv)
 {
@@ -201,6 +197,112 @@ int add_log_host(struct sockaddr_in *sin)
 
 
 /**
+ * add_option(long_option, has_arg, short_option)
+ *
+ * Utility function to add the given option to the list of possibilities for getopt.  Returns
+ * 1 on success or 0 on failure (upon malloc failure).  Note that this function does not completely
+ * clean up after itself on a failure... it is assumed that the program will not continue if an
+ * add_option call fails.
+ **/
+int add_option(const char *long_option, const int has_arg, const char short_option)
+{
+	int i, j;
+	static unsigned int num_options = 0;
+	char *tmp;
+
+#ifdef __DEBUG__
+	if (long_option == NULL && has_arg == 0 && short_option == 0)
+	{
+		printf("udploggerclientlib.c debug: marking end of the option array (after %d options)\n", num_options);
+	}
+	else
+	{
+		printf("udploggerclientlib.c debug: adding option --%s/-%c (has_arg %d)\n", long_option, short_option, has_arg);
+	}
+#endif
+
+	if (short_options == NULL)
+	{
+		short_options = calloc(1, sizeof(char));
+		if (! short_options)
+		{
+			perror("udploggerclientlib.c calloc(short_options)");
+			return 0;
+		}
+	}
+
+	i = num_options;
+	num_options++;
+	long_options = realloc(long_options, num_options * sizeof(struct option));
+	if (! long_options)
+	{
+		perror("udploggerclientlib.c realloc(long_options)");	
+		return 0;
+	}
+
+	if (long_option != NULL || has_arg != 0 || short_option != 0)
+	{
+		j = strlen(short_options);
+		if (has_arg == required_argument)
+		{
+			tmp = realloc(short_options, (j + 1 + 2) * sizeof(char));
+			if (tmp)
+			{
+				tmp[j] = short_option;
+				tmp[j+1] = ':';
+				tmp[j+2] = '\0';
+			}
+		}
+		else if (has_arg == optional_argument)
+		{
+			tmp = realloc(short_options, (j + 1 + 3) * sizeof(char));
+			if (tmp)
+			{
+				short_options[j] = short_option;
+				short_options[j+1] = ':';
+				short_options[j+2] = ':';
+				short_options[j+3] = '\0';
+			}
+		}
+		else if (has_arg == no_argument)
+		{
+			tmp = realloc(short_options, (j + 1 + 1) * sizeof(char));
+			if (tmp)
+			{
+				short_options[j] = short_option;
+				short_options[j+1] = '\0';
+			}
+		}
+		if (tmp)
+		{
+			short_options = tmp;
+		}
+		else
+		{
+			perror("udploggerclientlib.c realloc(short_options)");
+			return 0;
+		}
+	}
+	
+	long_options[i].name = NULL;
+	if (long_option)
+	{
+		long_options[i].name = strdup(long_option);
+		if (! long_options[i].name)
+		{
+			perror("udploggerclientlib.c strdup(long_option)");
+			return 0;
+		}
+	}
+	long_options[i].has_arg = has_arg;
+	long_options[i].flag = 0;
+	long_options[i].val = short_option;
+	
+	return 1;
+}
+
+
+/**
  * arguments_parse(argc, argv)
  *
  * Utility function to parse the passed in arguments using getopt; also responsible for sanity-checking
@@ -213,24 +315,42 @@ int arguments_parse(int argc, char **argv)
 	struct hostent *hostent_ptr;
 	char *hostname_tmp;
 	int i, j;
-	static struct option long_options[] =
-	{
-		{"help", no_argument, 0, 'h'},
-		{"host", required_argument, 0, 'o'},
-		{"interval", required_argument, 0, 'i'},
-		{"version", no_argument, 0, 'v'},
-		{0, 0, 0, 0}
-	};
+
 	struct sockaddr_in sin;
 	uintmax_t uint_tmp;
-	
+
 	/* Initialize our configuration to the default settings. */
 	udploggerclientlib_conf.beacon_interval = DEFAULT_BEACON_INTERVAL;
 	memset(&udploggerclientlib_conf.log_host, 0, sizeof(udploggerclientlib_conf.log_host));
+
+	if (! add_option("help", no_argument, 'h'))
+	{
+		return -1;
+	}
+	if (! add_option("host", required_argument, 'o'))
+	{
+		return -1;
+	}
+	if (! add_option("interval", required_argument, 'i'))
+	{
+		return -1;
+	}
+	if (! add_option("version", no_argument, 'v'))
+	{
+		return -1;
+	}
+	if (! add_option_hook())
+	{
+		return -1;
+	}
+	if (! add_option(NULL, 0, 0))
+	{
+		return -1;
+	}
 	
 	while (1)
-	{	
-		i = getopt_long(argc, argv, "hi:o:v", long_options, NULL);
+	{
+		i = getopt_long(argc, argv, short_options, long_options, NULL);
 		if (i == -1)
 		{
 			break;
@@ -240,12 +360,15 @@ int arguments_parse(int argc, char **argv)
 			case 'h':
 				printf("Usage: %s [OPTIONS]\n", argv[0]);
 				printf("\n");
+				printf("General Library Options\n");
 				printf("  -h, --help                 display this help and exit\n");
 				printf("  -o, --host <host>[:<port>] host and port to target with beacon transmissions (default broadcast)\n");
 				printf("                             (default udplogger port is %u)\n", UDPLOGGER_DEFAULT_PORT);
 				printf("  -i, --interval <interval>  interval in seconds between beacon transmissions (default %lu)\n", DEFAULT_BEACON_INTERVAL);
-				printf("  -v, --version              display version and exit\n");          
+				printf("  -v, --version              display version and exit\n");
 				printf("\n");
+				printf("%s Specific Options\n", argv[0]);
+				usage_hook();
 				return 0;
 			case 'i':
 				uint_tmp = strtoumax(optarg, 0, 10);
@@ -334,6 +457,20 @@ int arguments_parse(int argc, char **argv)
 			case 'v':
 				printf("udploggerclientlib.c revision r%d\n", REVISION);
 				return 0;
+			case '?':
+				break;
+			default:
+				j = getopt_hook(i);
+				if (! j)
+				{
+					fprintf(stderr, "udploggerclientlib.c unhandled option '%c'\n", i);
+					return -1;
+				}
+				else if (j < 0)
+				{
+					return j;
+				}
+				break;
 		}
 	}
 

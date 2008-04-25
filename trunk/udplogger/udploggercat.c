@@ -1,8 +1,10 @@
 #include <arpa/inet.h>
+#include <getopt.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include "udplogger.h"
+#include "udploggerclientlib.h"
 
 
 /*
@@ -28,12 +30,42 @@ struct udploggercat_configuration_t {
 #define TIME_STRING_BUFFER_SIZE 40U
 
 
-/**
- * log_packet_hook(<source host>, <log line>)
- *
- * Trivial implementation of log_packet_hook for linking with udploggerclientlib.o.
- * Prints a timestamp, the source host information, and then the log data itself.
- **/
+int add_option_hook();
+int getopt_hook(char);
+void inline log_packet_hook(struct sockaddr_in *, char *);
+void usage_hook();
+
+
+int add_option_hook()
+{
+	udploggercat_conf.delimiter_character = ' ';
+	return add_option("delimiter", required_argument, 'd');
+}
+
+
+int getopt_hook(char i)
+{
+	switch (i)
+	{
+		case 'd':
+			if (strlen(optarg) != 1)
+			{
+				fprintf(stderr, "udploggercat.c invalid delimiter '%s'\n", optarg);
+				return -1;
+			}
+			else
+			{
+				udploggercat_conf.delimiter_character = optarg[0];
+#ifdef __DEBUG__
+				printf("udploggercat.c debug: setting delimiter to '%c' (0x%x)\n", udploggercat_conf.delimiter_character, udploggercat_conf.delimiter_character);
+#endif
+				return 1;
+			}			
+	}
+	return 0;
+}
+
+
 void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 {
 	static time_t current_timestamp = 0;
@@ -69,3 +101,11 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	}
 	printf("%s%c[%s:%hu]%c%s\n", current_time_str, udploggercat_conf.delimiter_character, inet_ntoa(sender->sin_addr), ntohs(sender->sin_port), udploggercat_conf.delimiter_character, line);
 }
+
+
+void usage_hook()
+{
+	printf("  -d, --delimiter            set the delimiter to be used in-between log fields\n");
+	printf("                             (defaults to ' ' [space])\n");
+}
+
