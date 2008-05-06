@@ -14,7 +14,7 @@ void usage_hook();
 
 int add_option_hook()
 {
-	return 0;
+	return 1;
 }
 
 

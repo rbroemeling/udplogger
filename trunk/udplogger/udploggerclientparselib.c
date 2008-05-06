@@ -78,7 +78,8 @@ void parse_log_line(char *line, struct log_entry_t *data)
 		&parse_nexopia_userage,
 		&parse_nexopia_usersex,
 		&parse_nexopia_userlocation,
-		&parse_nexopia_usertype
+		&parse_nexopia_usertype,
+		NULL
 	};
 	char *ptr;
 	char tmp[PACKET_MAXIMUM_SIZE];
@@ -95,7 +96,7 @@ void parse_log_line(char *line, struct log_entry_t *data)
 
 	ptr = tmp;
 	i = 0;
-	while (ptr < (tmp + length))
+	while ((ptr < (tmp + length)) && (parse_functions[i] != NULL))
 	{
 		(*parse_functions[i])(ptr, data);
 		i++;
@@ -110,7 +111,7 @@ void parse_log_line(char *line, struct log_entry_t *data)
 
 void parse_body_size(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%u", field, &(data->body_size)))
+	if (! sscanf(field, "%u", &(data->body_size)))
 	{
 		data->body_size = 0;
 	}
@@ -122,7 +123,7 @@ void parse_body_size(const char *field, struct log_entry_t *data)
 
 void parse_bytes_incoming(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%u", field, &(data->bytes_incoming)))
+	if (! sscanf(field, "%u", &(data->bytes_incoming)))
 	{
 		data->bytes_incoming = 0;
 	}
@@ -134,7 +135,7 @@ void parse_bytes_incoming(const char *field, struct log_entry_t *data)
 
 void parse_bytes_outgoing(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%u", field, &(data->bytes_outgoing)))
+	if (! sscanf(field, "%u", &(data->bytes_outgoing)))
 	{
 		data->bytes_outgoing = 0;
 	}
@@ -170,7 +171,14 @@ void parse_connection_status(const char *field, struct log_entry_t *data)
 
 void parse_forwarded_for(const char *field, struct log_entry_t *data)
 {
-	memcpy(&(data->forwarded_for), field, strlen(field) + 1);
+	if (! strcasecmp(field, "-"))
+	{
+		data->forwarded_for[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->forwarded_for), field, strlen(field) + 1);
+	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_forwarded_for('%s') => '%s'\n", field, data->forwarded_for);
 #endif
@@ -223,7 +231,7 @@ void parse_method(const char *field, struct log_entry_t *data)
 
 void parse_nexopia_userage(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%hu", field, &(data->nexopia_userage)))
+	if (! sscanf(field, "%hu", &(data->nexopia_userage)))
 	{
 		data->nexopia_userage = 0;
 	}
@@ -235,7 +243,7 @@ void parse_nexopia_userage(const char *field, struct log_entry_t *data)
 
 void parse_nexopia_userid(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%lu", field, &(data->nexopia_userid)))
+	if (! sscanf(field, "%lu", &(data->nexopia_userid)))
 	{
 		data->nexopia_userid = 0;
 	}
@@ -247,7 +255,7 @@ void parse_nexopia_userid(const char *field, struct log_entry_t *data)
 
 void parse_nexopia_userlocation(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%lu", field, &(data->nexopia_userlocation)))
+	if (! sscanf(field, "%lu", &(data->nexopia_userlocation)))
 	{
 		data->nexopia_userlocation = 0;
 	}
@@ -296,14 +304,21 @@ void parse_nexopia_usertype(const char *field, struct log_entry_t *data)
 		data->nexopia_usertype = usertype_unknown;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_usertype('%s')\n", field);
+	printf("udploggerclientlib.c debug:    parse_nexopia_usertype('%s') => %u\n", field, data->nexopia_usertype);
 #endif
 }
 
 
 void parse_query_string(const char *field, struct log_entry_t *data)
 {
-	memcpy(&(data->query_string), field, strlen(field) + 1);
+	if (! strcasecmp(field, "-"))
+	{
+		data->query_string[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->query_string), field, strlen(field) + 1);	
+	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_query_string('%s') => '%s'\n", field, data->query_string);
 #endif
@@ -312,7 +327,14 @@ void parse_query_string(const char *field, struct log_entry_t *data)
 
 void parse_referer(const char *field, struct log_entry_t *data)
 {
-	memcpy(&(data->referer), field, strlen(field) + 1);
+	if (! strcasecmp(field, "-"))
+	{
+		data->referer[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->referer), field, strlen(field) + 1);
+	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_referer('%s') => '%s'\n", field, data->referer);
 #endif
@@ -333,7 +355,14 @@ void parse_remote_address(const char *field, struct log_entry_t *data)
 
 void parse_request_url(const char *field, struct log_entry_t *data)
 {
-	memcpy(&(data->request_url), field, strlen(field) + 1);
+	if (! strcasecmp(field, "-"))
+	{
+		data->request_url[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->request_url), field, strlen(field) + 1);
+	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_request_url('%s') => '%s'\n", field, data->request_url);
 #endif
@@ -342,7 +371,7 @@ void parse_request_url(const char *field, struct log_entry_t *data)
 
 void parse_serial(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%lu", field, &(data->serial)))
+	if (! sscanf(field, "%lu", &(data->serial)))
 	{
 		data->serial = 0;
 	}
@@ -354,7 +383,7 @@ void parse_serial(const char *field, struct log_entry_t *data)
 
 void parse_status(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%hu", field, &(data->status)))
+	if (! sscanf(field, "%hu", &(data->status)))
 	{
 		data->status = 0;
 	}
@@ -375,7 +404,7 @@ void parse_tag(const char *field, struct log_entry_t *data)
 
 void parse_time_used(const char *field, struct log_entry_t *data)
 {
-	if (! sscanf("%hu", field, &(data->time_used)))
+	if (! sscanf(field, "%hu", &(data->time_used)))
 	{
 		data->time_used = 0;
 	}
@@ -387,7 +416,14 @@ void parse_time_used(const char *field, struct log_entry_t *data)
 
 void parse_user_agent(const char *field, struct log_entry_t *data)
 {
-	memcpy(&(data->user_agent), field, strlen(field) + 1);
+	if (! strcasecmp(field, "-"))
+	{
+		data->user_agent[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->user_agent), field, strlen(field) + 1);
+	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_user_agent('%s') => '%s'\n", field, data->user_agent);
 #endif
