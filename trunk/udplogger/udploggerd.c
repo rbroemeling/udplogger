@@ -281,10 +281,9 @@ void logging_loop(int fd)
 		{
 			memcpy(&output_buffer[output_buffer_idx], conf.tag, conf.tag_length);
 			output_buffer_idx += conf.tag_length;
-
-			output_buffer[output_buffer_idx] = DELIMITER_CHARACTER;
-			output_buffer_idx++;
 		}
+		output_buffer[output_buffer_idx] = DELIMITER_CHARACTER;
+		output_buffer_idx++;
 
 		input_line_length = trim(input_buffer, INPUT_BUFFER_SIZE - 1);
 		if (input_line_length > (PACKET_MAXIMUM_SIZE - output_buffer_idx))
