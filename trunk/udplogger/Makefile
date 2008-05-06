@@ -5,7 +5,7 @@ CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
 LDLIBS=-lz -pthread
 
 
-all: udploggerd udploggercat
+all: udploggerd udploggercat udploggergrep
 
 clean:
 	rm -f *.o
@@ -17,6 +17,7 @@ proper: realclean
 realclean: clean
 	rm -f udploggerd
 	rm -f udploggercat
+	rm -f udploggergrep
 	rm -f udplogger-r*.tar.gz
 
 rebuild: realclean all
@@ -34,3 +35,5 @@ source-package:
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 
 udploggercat: udploggerclientlib.o udploggercat.o socket.o
+
+udploggergrep: udploggerclientlib.o udploggerclientparselib.o udploggergrep.o socket.o
