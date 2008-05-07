@@ -2,6 +2,7 @@ REVISION=${shell svn info . | grep '^Revision: ' | sed -e 's/[^0-9]//g'}
 
 CC=gcc
 CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
+#CFLAGS+=-D__DEBUG__
 LDLIBS=-lz -pthread
 
 
@@ -33,4 +34,5 @@ source-package:
 
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 
-udploggercat: udploggerclientlib.o udploggercat.o socket.o
+udploggercat: udploggerclientlib.o udploggerclientparselib.o udploggercat.o socket.o
+	${CC}   ${?} ${LDLIBS} -lpcre -o ${@}

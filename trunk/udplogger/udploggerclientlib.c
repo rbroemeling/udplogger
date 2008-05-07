@@ -361,11 +361,11 @@ int arguments_parse(int argc, char **argv)
 				printf("Usage: %s [OPTIONS]\n", argv[0]);
 				printf("\n");
 				printf("General Library Options\n");
-				printf("  -h, --help                 display this help and exit\n");
-				printf("  -o, --host <host>[:<port>] host and port to target with beacon transmissions (default broadcast)\n");
-				printf("                             (default udplogger port is %u)\n", UDPLOGGER_DEFAULT_PORT);
-				printf("  -i, --interval <interval>  interval in seconds between beacon transmissions (default %lu)\n", DEFAULT_BEACON_INTERVAL);
-				printf("  -v, --version              display version and exit\n");
+				printf("  -h, --help                        display this help and exit\n");
+				printf("  -o, --host <host>[:<port>]        host and port to target with beacon transmissions (default broadcast)\n");
+				printf("                                    (default udplogger port is %u)\n", UDPLOGGER_DEFAULT_PORT);
+				printf("  -i, --interval <interval>         interval in seconds between beacon transmissions (default %lu)\n", DEFAULT_BEACON_INTERVAL);
+				printf("  -v, --version                     display version and exit\n");
 				printf("\n");
 				printf("%s Specific Options\n", argv[0]);
 				usage_hook();
