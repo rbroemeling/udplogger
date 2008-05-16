@@ -31,7 +31,7 @@ source-package:
 	rm -rf "udplogger-r${REVISION}"
 
 udploggerd: beacon.o socket.o trim.o udploggerd.o
-	${CC}   ${?} ${LDLIBS} -pthread -o ${@}
+	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
 
 udploggercat: udploggerclientlib.o udploggerclientparselib.o udploggercat.o socket.o
-	${CC}   ${?} ${LDLIBS} -lpcre -o ${@}
+	${CC}   ${^} ${LDLIBS} -lpcre -o ${@}
