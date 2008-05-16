@@ -121,6 +121,38 @@ extern void inline log_packet_hook(struct sockaddr_in *, char *);
 
 
 /**
+ * map_connection_status(<status string>)
+ *
+ * A simple helper function to map a string to a member of the connection_status_enum enumeration.
+ **/
+enum connection_status_enum map_connection_status(const char *);
+
+
+/**
+ * map_method(<method string>)
+ *
+ * A simple helper function to map a string to a member of the request_method_enum enumeration.
+ **/
+enum request_method_enum map_method(const char *);
+
+
+/**
+ * map_nexopia_usersex(<sex string>)
+ *
+ * A simple helper function to map a string to a member of the sex_enum enumeration.
+ **/
+enum sex_enum map_nexopia_usersex(const char *);
+
+
+/**
+ * map_nexopia_usertype(<usertype string>)
+ *
+ * A simple helper function to map a string to a member of the usertype_enum enumeration.
+ **/
+enum usertype_enum map_nexopia_usertype(const char *);
+
+
+/**
  * parse_log_line(<log line>, <struct ptr>)
  *
  * Utility function implemented in udploggerclientlib.c to parse a log line out into an easy-to-use struct, both of which are

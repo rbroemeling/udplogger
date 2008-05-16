@@ -15,7 +15,11 @@
  * parse_log_line as defined in udploggerclientlib.h.  Each helper function is called for the field that matches
  * it's index in the parse_functions array.
  *
- * See 'udploggergrep.c' for a simple example.
+ * For fields that map static strings to enums, the parse_* function simply calls a map_* function to perform the
+ * static string -> enum mapping.  This is done so that the map_* functions can be used in other places in the
+ * codebase (i.e. parsing command-line parameter arguments).
+ *
+ * See 'udploggercat.c' for a simple example.
  */
  
  
@@ -109,6 +113,92 @@ void parse_log_line(char *line, struct log_entry_t *data)
 }
 
 
+enum connection_status_enum map_connection_status(const char *field)
+{
+	if (! strcasecmp(field, "X"))
+	{
+		return connection_status_aborted;
+	}
+	else if (! strcasecmp(field, "+"))
+	{
+		return connection_status_keep_alive;
+	}
+	else if (! strcasecmp(field, "-"))
+	{
+		return connection_status_close;
+	}
+	return connection_status_unknown;
+}
+
+	
+enum request_method_enum map_method(const char *field)
+{
+	if (! strcasecmp(field, "get"))
+	{
+		return request_method_get;
+	}
+	else if (! strcasecmp(field, "post"))
+	{
+		return request_method_post;
+	}	
+	else if (! strcasecmp(field, "head"))
+	{
+		return request_method_head;
+	}	
+	else if (! strcasecmp(field, "options"))
+	{
+		return request_method_options;
+	}	
+	else if (! strcasecmp(field, "put"))
+	{
+		return request_method_put;
+	}	
+	else if (! strcasecmp(field, "delete"))
+	{
+		return request_method_delete;
+	}	
+	else if (! strcasecmp(field, "trace"))
+	{
+		return request_method_trace;
+	}	
+	else if (! strcasecmp(field, "connect"))
+	{
+		return request_method_connect;
+	}
+	return request_method_unknown;
+}
+
+enum sex_enum map_nexopia_usersex(const char *field)
+{
+	if (! strcasecmp(field, "female"))
+	{
+		return sex_female;
+	}	
+	else if (! strcasecmp(field, "male"))
+	{
+		return sex_male;
+	}
+	return sex_unknown;
+}
+
+enum usertype_enum map_nexopia_usertype(const char *field)
+{
+	if (! strcasecmp(field, "anon"))
+	{
+		return usertype_anon;
+	}	
+	else if (! strcasecmp(field, "user"))
+	{
+		return usertype_user;
+	}
+	else if (! strcasecmp(field, "plus"))
+	{
+		return usertype_plus;
+	}
+	return usertype_unknown;
+}
+
+
 void parse_body_size(const char *field, struct log_entry_t *data)
 {
 	if (! sscanf(field, "%u", &(data->body_size)))
@@ -147,22 +237,7 @@ void parse_bytes_outgoing(const char *field, struct log_entry_t *data)
 
 void parse_connection_status(const char *field, struct log_entry_t *data)
 {
-	if (! strcasecmp(field, "X"))
-	{
-		data->connection_status = connection_status_aborted;
-	}
-	else if (! strcasecmp(field, "+"))
-	{
-		data->connection_status = connection_status_keep_alive;
-	}
-	else if (! strcasecmp(field, "-"))
-	{
-		data->connection_status = connection_status_close;
-	}
-	else
-	{
-		data->connection_status = connection_status_unknown;
-	}
+	data->connection_status = map_connection_status(field);
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_connection_status('%s') => %u\n", field, data->connection_status);
 #endif
@@ -187,42 +262,7 @@ void parse_forwarded_for(const char *field, struct log_entry_t *data)
 
 void parse_method(const char *field, struct log_entry_t *data)
 {
-	if (! strcasecmp(field, "get"))
-	{
-		data->method = request_method_get;
-	}
-	else if (! strcasecmp(field, "post"))
-	{
-		data->method = request_method_post;
-	}	
-	else if (! strcasecmp(field, "head"))
-	{
-		data->method = request_method_head;
-	}	
-	else if (! strcasecmp(field, "options"))
-	{
-		data->method = request_method_options;
-	}	
-	else if (! strcasecmp(field, "put"))
-	{
-		data->method = request_method_put;
-	}	
-	else if (! strcasecmp(field, "delete"))
-	{
-		data->method = request_method_delete;
-	}	
-	else if (! strcasecmp(field, "trace"))
-	{
-		data->method = request_method_trace;
-	}	
-	else if (! strcasecmp(field, "connect"))
-	{
-		data->method = request_method_connect;
-	}
-	else
-	{
-		data->method = request_method_unknown;
-	}
+	data->method = map_method(field);
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_method('%s') => %u\n", field, data->method);
 #endif
@@ -267,18 +307,7 @@ void parse_nexopia_userlocation(const char *field, struct log_entry_t *data)
 
 void parse_nexopia_usersex(const char *field, struct log_entry_t *data)
 {
-	if (! strcasecmp(field, "female"))
-	{
-		data->nexopia_usersex = sex_female;
-	}	
-	else if (! strcasecmp(field, "male"))
-	{
-		data->nexopia_usersex = sex_male;
-	}
-	else
-	{
-		data->nexopia_usersex = sex_unknown;
-	}
+	data->nexopia_usersex = map_nexopia_usersex(field);
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_nexopia_usersex('%s') => %u\n", field, data->nexopia_usersex);
 #endif
@@ -287,22 +316,7 @@ void parse_nexopia_usersex(const char *field, struct log_entry_t *data)
 
 void parse_nexopia_usertype(const char *field, struct log_entry_t *data)
 {
-	if (! strcasecmp(field, "anon"))
-	{
-		data->nexopia_usertype = usertype_anon;
-	}	
-	else if (! strcasecmp(field, "user"))
-	{
-		data->nexopia_usertype = usertype_user;
-	}
-	else if (! strcasecmp(field, "plus"))
-	{
-		data->nexopia_usertype = usertype_plus;
-	}
-	else
-	{
-		data->nexopia_usertype = usertype_unknown;
-	}
+	data->nexopia_usertype = map_nexopia_usertype(field);
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_nexopia_usertype('%s') => %u\n", field, data->nexopia_usertype);
 #endif
