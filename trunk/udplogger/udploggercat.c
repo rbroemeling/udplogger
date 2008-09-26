@@ -29,6 +29,7 @@ size_t strnlen(const char *, size_t);
  */
 struct udploggercat_configuration_t {
 	unsigned char delimiter_character;
+	FILE *log_destination;
 	pcre *request_url_filter;
 	uint16_t status_filter;
 } udploggercat_conf;
@@ -50,13 +51,16 @@ void usage_hook();
 int add_option_hook()
 {
 	udploggercat_conf.delimiter_character = DELIMITER_CHARACTER;
+	udploggercat_conf.log_destination = stdout;
 	udploggercat_conf.request_url_filter = NULL;
 	udploggercat_conf.status_filter = 0;
-	return (
+	return
+	(
 		add_option("delimiter", required_argument, 'd') &&
+		add_option("file", required_argument, 'f') &&
 		add_option("request_url_filter", required_argument, 'u') &&
 		add_option("status_filter", required_argument, 's')
-		);
+	);
 }
 
 
@@ -65,7 +69,7 @@ int getopt_hook(char i)
 	const char *pcre_error;
 	int pcre_error_offset;
 	uintmax_t uint_tmp;
-	
+
 	switch (i)
 	{
 		case 'd':
@@ -82,6 +86,21 @@ int getopt_hook(char i)
 #endif
 				return 1;
 			}
+		case 'f':
+			if (strcmp("-", optarg))
+			{
+				udploggercat_conf.log_destination = fopen(optarg, "a");
+				if (udploggercat_conf.log_destination == NULL)
+				{
+					perror("udploggercat.c fopen()");
+					fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", optarg);
+					return -1;
+				}
+			}
+#ifdef __DEBUG__
+			printf("udploggercat.c debug: setting output file to '%s'\n", optarg);
+#endif
+			return 1;
 		case 's':
 			uint_tmp = strtoumax(optarg, 0, 10);
 			if (! uint_tmp || uint_tmp == UINT_MAX || uint_tmp > 65535)
@@ -96,7 +115,7 @@ int getopt_hook(char i)
 				printf("udploggercat.c debug: setting status_filter to '%hu'\n", udploggercat_conf.status_filter);
 #endif
 				return 1;
-			}				
+			}
 		case 'u':
 			udploggercat_conf.request_url_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
 			if (udploggercat_conf.request_url_filter == NULL)
@@ -176,7 +195,7 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 		}
 	}
 
-	printf("%s%c[%s:%hu]%c%s\n", current_time_str, udploggercat_conf.delimiter_character, inet_ntoa(sender->sin_addr), ntohs(sender->sin_port), udploggercat_conf.delimiter_character, line);
+	fprintf(udploggercat_conf.log_destination, "%s%c[%s:%hu]%c%s\n", current_time_str, udploggercat_conf.delimiter_character, inet_ntoa(sender->sin_addr), ntohs(sender->sin_port), udploggercat_conf.delimiter_character, line);
 }
 
 
@@ -184,6 +203,7 @@ void usage_hook()
 {
 	printf("  -d, --delimiter <delim>           set the delimiter to be used in-between log fields\n");
 	printf("                                    (defaults to character 0x%x)\n", DELIMITER_CHARACTER);
+	printf("  -f, --file <file>                 send log data to the file <file> (use `-' for stdout, which is the default)\n");
 	printf("  -u, --request_url_filter <pcre>   only display log lines whose request_url field matches <pcre>\n");
 	printf("  -s, --status_filter <status>      only display log lines whose status field matches <status>\n");
 }
