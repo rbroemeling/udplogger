@@ -65,7 +65,7 @@ struct log_entry_t
 	unsigned long nexopia_userid;                    /* %{X-LIGHTTPD-userid}o - nexopia UID */
 	unsigned long nexopia_userlocation;              /* %{X-LIGHTTPD-loc}o - nexopia user location */
 	enum sex_enum nexopia_usersex;                   /* %{X-LIGHTTPD-sex}o - nexopia user sex */
-	enum usertype_enum nexopia_usertype;             /* %{X-LIGHTTPD-usertype}o */     
+	enum usertype_enum nexopia_usertype;             /* %{X-LIGHTTPD-usertype}o */
 	char query_string[INPUT_BUFFER_SIZE];            /* %q - query string */
 	char raw[PACKET_MAXIMUM_SIZE];                   /* raw, unmodified logline */
 	char referer[INPUT_BUFFER_SIZE];                 /* %{Referer} - referer string */
@@ -80,6 +80,15 @@ struct log_entry_t
 	uint16_t time_used;                              /* %T - time used (seconds) */
 	char user_agent[INPUT_BUFFER_SIZE];              /* %{User-agent} - user agent string */
 };
+
+
+/*
+ * Structure that holds a collection of signal flags.  A signal will be a member
+ * of this set if the signal has been received/has not been dealt with.  This
+ * set should be checked for signals to be handled and if they are present,
+ * the condition should be handled and the signal should be removed from the set.
+ */
+sigset_t signal_flags;
 
 
 /**

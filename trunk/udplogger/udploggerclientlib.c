@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,6 +67,7 @@ int add_log_host(struct sockaddr_in *);
 int add_option(const char *, const int, const char);
 int arguments_parse(int, char **);
 void broadcast_scan();
+static void sig_handler(int);
 
 
 static struct option *long_options = NULL;
@@ -90,6 +92,13 @@ int main (int argc, char **argv)
 	struct sockaddr_in sender;
 	socklen_t senderlen = sizeof(sender);
 	struct timeval timeout;
+
+	sigemptyset(&signal_flags);
+	if (signal(SIGTERM, sig_handler) == SIG_ERR)
+	{
+		perror("udploggerclientlib.c signal(SIGTERM)");
+		return -1;
+	}
 
 	result = arguments_parse(argc, argv);
 	if (result <= 0)
@@ -117,7 +126,7 @@ int main (int argc, char **argv)
 	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
 	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
-	memset(&timeout, 0, sizeof(timeout));	
+	memset(&timeout, 0, sizeof(timeout));
 
 	FD_ZERO(&all_set);
 	FD_SET(fd, &all_set);
@@ -151,11 +160,15 @@ int main (int argc, char **argv)
 				}
 			}
 		}
+		if (sigismember(&signal_flags, SIGTERM))
+		{
+			break;
+		}
 	}
 
 	return 0;
 }
-	
+
 
 /**
  * add_log_host(<log host sockaddr_in>)
@@ -166,13 +179,13 @@ int main (int argc, char **argv)
 int add_log_host(struct sockaddr_in *sin)
 {
 	struct log_host_t *log_host_ptr;
-	
+
 	log_host_ptr = &udploggerclientlib_conf.log_host;
 	while (log_host_ptr->next)
 	{
 		log_host_ptr = log_host_ptr->next;
 	}
-	
+
 	if (log_host_ptr->address.sin_family)
 	{
 		log_host_ptr->next = calloc(1, sizeof(struct log_host_t));
@@ -183,11 +196,11 @@ int add_log_host(struct sockaddr_in *sin)
 		}
 		log_host_ptr = log_host_ptr->next;
 	}
-	
+
 	log_host_ptr->address.sin_family = sin->sin_family;
 	log_host_ptr->address.sin_addr.s_addr = sin->sin_addr.s_addr;
 	log_host_ptr->address.sin_port = sin->sin_port;
-	
+
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug: added target %s:%hu\n", inet_ntoa(log_host_ptr->address.sin_addr), ntohs(log_host_ptr->address.sin_port));
 #endif
@@ -236,7 +249,7 @@ int add_option(const char *long_option, const int has_arg, const char short_opti
 	long_options = realloc(long_options, num_options * sizeof(struct option));
 	if (! long_options)
 	{
-		perror("udploggerclientlib.c realloc(long_options)");	
+		perror("udploggerclientlib.c realloc(long_options)");
 		return 0;
 	}
 
@@ -283,7 +296,7 @@ int add_option(const char *long_option, const int has_arg, const char short_opti
 			return 0;
 		}
 	}
-	
+
 	long_options[i].name = NULL;
 	if (long_option)
 	{
@@ -297,7 +310,7 @@ int add_option(const char *long_option, const int has_arg, const char short_opti
 	long_options[i].has_arg = has_arg;
 	long_options[i].flag = 0;
 	long_options[i].val = short_option;
-	
+
 	return 1;
 }
 
@@ -347,7 +360,7 @@ int arguments_parse(int argc, char **argv)
 	{
 		return -1;
 	}
-	
+
 	while (1)
 	{
 		i = getopt_long(argc, argv, short_options, long_options, NULL);
@@ -384,12 +397,12 @@ int arguments_parse(int argc, char **argv)
 				if (char_ptr == optarg)
 				{
 					fprintf(stderr, "udploggerclientlib.c invalid host specification '%s'\n", optarg);
-					return -1;				
+					return -1;
 				}
 #ifdef __DEBUG__
 				printf("udploggerclientlib.c debug: parsing host target '%s'\n", optarg);
 #endif
-				
+
 				if (char_ptr)
 				{
 					hostname_tmp = strndup(optarg, (char_ptr - optarg));
@@ -438,7 +451,7 @@ int arguments_parse(int argc, char **argv)
 					return -1;
 				}
 				free(hostname_tmp);
-				
+
 				for (j = 0; hostent_ptr->h_addr_list[j] != NULL; j++)
 				{
 #ifdef __DEBUG__
@@ -449,7 +462,7 @@ int arguments_parse(int argc, char **argv)
 						sin.sin_family = hostent_ptr->h_addrtype;
 						sin.sin_addr.s_addr = ((struct in_addr *)(hostent_ptr->h_addr_list[j]))->s_addr;
 						sin.sin_port = htons(uint_tmp);
-						
+
 						add_log_host(&sin);
 					}
 				}
@@ -486,7 +499,7 @@ int arguments_parse(int argc, char **argv)
 		printf("udploggerclientlib.c no log targets\n");
 		return -1;
 	}
-	
+
 	return 1;
 }
 
@@ -518,14 +531,14 @@ void broadcast_scan()
 		perror("udploggerclientlib.c calloc(ifc_buf)");
 		return;
 	}
-	
+
 	fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0)
 	{
 		perror("udploggerclientlib.c socket()");
 		return;
 	}
-	
+
 	if (ioctl(fd, SIOCGIFCONF, &ifc) < 0)
 	{
 		perror("udploggerclientlib.c ioctl(SIOCGIFCONF)");
@@ -535,7 +548,7 @@ void broadcast_scan()
 		}
 		return;
 	}
-	
+
 	ifr = ifc.ifc_req;
 	num_interfaces = ifc.ifc_len / sizeof(struct ifreq);
 	for (i = 0; i++ < num_interfaces; ifr++)
@@ -557,7 +570,7 @@ void broadcast_scan()
 			perror("udploggerclientlib.c ioctl(SIOCGIFFLAGS)");
 			continue;
 		}
-		
+
 		if (!(ifr->ifr_flags & IFF_UP))
 		{
 #ifdef __DEBUG__
@@ -586,13 +599,13 @@ void broadcast_scan()
 #endif
 			continue;
 		}
-		
+
 		if (ioctl(fd, SIOCGIFBRDADDR, ifr) < 0)
 		{
 			perror("udploggerclientlib.c ioctl(SIOCGIFBRDADDR)");
 			continue;
 		}
-		
+
 		memcpy(&sin, &(ifr->ifr_broadaddr), sizeof(ifr->ifr_broadaddr));
 		if (sin.sin_addr.s_addr == INADDR_ANY)
 		{
@@ -610,4 +623,19 @@ void broadcast_scan()
 	{
 		perror("udploggerclientlib.c close()");
 	}
+}
+
+
+/**
+ * sig_handler(int signal_number)
+ *
+ * Generic signal handler -- just adds the received signal to our set of
+ * signals received and then returns.
+ */
+static void sig_handler(int signal_number)
+{
+	#ifdef __DEBUG__
+		printf("udploggerclientlib.c debug: received signal %d\n", signal_number)
+	#endif
+	sigaddset(&signal_flags, signal_number);
 }
