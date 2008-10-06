@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <getopt.h>
 #include <inttypes.h>
 #include <net/if.h>
@@ -136,8 +137,15 @@ int main (int argc, char **argv)
 		result = select(fd+1, &read_set, NULL, NULL, &timeout);
 		if (result < 0)
 		{
-			perror("udploggerclientlib.c select()");
-			return -1;
+			/*
+			 * Do not die on select() failures if we were just interrupted by a
+			 * signal.
+			 */
+			if (errno != EINTR)
+			{
+				perror("udploggerclientlib.c select()");
+				return -1;
+			}
 		}
 		else if (result == 0)
 		{
@@ -635,7 +643,7 @@ void broadcast_scan()
 static void sig_handler(int signal_number)
 {
 	#ifdef __DEBUG__
-		printf("udploggerclientlib.c debug: received signal %d\n", signal_number)
+		printf("udploggerclientlib.c debug: received signal %d\n", signal_number);
 	#endif
 	sigaddset(&signal_flags, signal_number);
 }
