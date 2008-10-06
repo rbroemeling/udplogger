@@ -82,15 +82,6 @@ struct log_entry_t
 };
 
 
-/*
- * Structure that holds a collection of signal flags.  A signal will be a member
- * of this set if the signal has been received/has not been dealt with.  This
- * set should be checked for signals to be handled and if they are present,
- * the condition should be handled and the signal should be removed from the set.
- */
-sigset_t signal_flags;
-
-
 /**
  * add_option(<long option>, <has argument>, <short option>)
  *
@@ -118,6 +109,15 @@ extern int add_option_hook();
  * Each client should deal properly with each option that the client has added in add_option_hook().
  **/
 extern int getopt_hook(char);
+
+
+/**
+ * handle_signal_hook(<signal flags>)
+ *
+ * Implemented in udplogger clients to handle any signals that are marked as received in
+ * the sigset_t <signal flags>.
+ **/
+extern void inline handle_signal_hook(sigset_t *);
 
 
 /**

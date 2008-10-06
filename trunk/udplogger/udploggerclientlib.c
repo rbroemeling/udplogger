@@ -47,6 +47,15 @@ struct log_host_t {
 
 
 /*
+ * Structure that holds a collection of signal flags.  A signal will be a member
+ * of this set if the signal has been received/has not been dealt with.  This
+ * set should be checked for signals to be handled and if they are present,
+ * the condition should be handled and the signal should be removed from the set.
+ */
+static sigset_t signal_flags;
+
+
+/*
  * Structure that contains configuration information for the running instance
  * of this udplogger library.
  */
@@ -100,6 +109,11 @@ int main (int argc, char **argv)
 		perror("udploggerclientlib.c signal(SIGTERM)");
 		return -1;
 	}
+	if (signal(SIGHUP, sig_handler) == SIG_ERR)
+	{
+		perror("udploggerclientlib.c signal(SIGHUP)");
+		return -1;
+	}
 
 	result = arguments_parse(argc, argv);
 	if (result <= 0)
@@ -146,6 +160,7 @@ int main (int argc, char **argv)
 				perror("udploggerclientlib.c select()");
 				return -1;
 			}
+			handle_signal_hook(&signal_flags);
 		}
 		else if (result == 0)
 		{

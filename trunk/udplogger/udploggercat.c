@@ -2,6 +2,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <pcre.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -30,6 +31,7 @@ size_t strnlen(const char *, size_t);
 struct udploggercat_configuration_t {
 	unsigned char delimiter_character;
 	FILE *log_destination;
+	char *log_destination_path;
 	pcre *request_url_filter;
 	uint16_t status_filter;
 } udploggercat_conf;
@@ -44,6 +46,7 @@ struct udploggercat_configuration_t {
 
 int add_option_hook();
 int getopt_hook(char);
+void inline handle_signal_hook(sigset_t *);
 void inline log_packet_hook(struct sockaddr_in *, char *);
 void usage_hook();
 
@@ -52,6 +55,7 @@ int add_option_hook()
 {
 	udploggercat_conf.delimiter_character = DELIMITER_CHARACTER;
 	udploggercat_conf.log_destination = stdout;
+	udploggercat_conf.log_destination_path = NULL;
 	udploggercat_conf.request_url_filter = NULL;
 	udploggercat_conf.status_filter = 0;
 	return
@@ -89,16 +93,22 @@ int getopt_hook(char i)
 		case 'f':
 			if (strcmp("-", optarg))
 			{
-				udploggercat_conf.log_destination = fopen(optarg, "a");
+				udploggercat_conf.log_destination_path = strdup(optarg);
+				if (udploggercat_conf.log_destination_path == NULL)
+				{
+					perror("udploggercat.c strdup()");
+					return -1;
+				}
+				udploggercat_conf.log_destination = fopen(udploggercat_conf.log_destination_path, "a");
 				if (udploggercat_conf.log_destination == NULL)
 				{
 					perror("udploggercat.c fopen()");
-					fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", optarg);
+					fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
 					return -1;
 				}
 			}
 #ifdef __DEBUG__
-			printf("udploggercat.c debug: setting output file to '%s'\n", optarg);
+			printf("udploggercat.c debug: setting output file to '%s'\n", udploggercat_conf.log_destination_path);
 #endif
 			return 1;
 		case 's':
@@ -132,6 +142,39 @@ int getopt_hook(char i)
 			}
 	}
 	return 0;
+}
+
+
+void inline handle_signal_hook(sigset_t *signal_flags)
+{
+	FILE *reopened_log_destination = NULL;
+
+	if (sigismember(signal_flags, SIGHUP) && (udploggercat_conf.log_destination_path != NULL))
+	{
+		reopened_log_destination = fopen(udploggercat_conf.log_destination_path, "a");
+		if (reopened_log_destination == NULL)
+		{
+			perror("udploggercat.c fopen()");
+			fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
+		}
+		else
+		{
+			if (fclose(udploggercat_conf.log_destination) != 0)
+			{
+				perror("udploggercat.c fclose()");
+			}
+			udploggercat_conf.log_destination = reopened_log_destination;
+		}
+		reopened_log_destination = NULL;
+	}
+	if (sigismember(signal_flags, SIGTERM) && (udploggercat_conf.log_destination_path != NULL))
+	{
+		if (fclose(udploggercat_conf.log_destination) != 0)
+		{
+			perror("udploggercat.c fclose()");
+		}
+		udploggercat_conf.log_destination = NULL;
+	}
 }
 
 
