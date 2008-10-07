@@ -93,17 +93,69 @@ char *short_options = NULL;
 int main (int argc, char **argv)
 {
 	fd_set all_set;
+	sigset_t blocked_signals;
 	char beacon[BEACON_PACKET_SIZE];
 	char buffer[PACKET_MAXIMUM_SIZE];
-	struct log_host_t *log_host_ptr;
 	int fd;
+	struct log_host_t *log_host_ptr;
+	sigset_t original_signal_mask;
 	fd_set read_set;
 	int result = 0;
 	struct sockaddr_in sender;
 	socklen_t senderlen = sizeof(sender);
-	struct timeval timeout;
 
-	sigemptyset(&signal_flags);
+	/*
+	 * Create a signal set that consists of all of the signals except for SIGKILL,
+	 * SIGSEGV, and SIGSTOP.  Do not include those signals because blocking them
+	 * doesn't work (for SIGKILL and SIGSTOP) or they are too important to block
+	 * (for SIGSEGV).
+	 */
+	if (sigfillset(&blocked_signals))
+	{
+		perror("udploggerclientlib.c sigfillset()");
+		return -1;
+	}
+	if (sigdelset(&blocked_signals, SIGKILL) || sigdelset(&blocked_signals, SIGSEGV) || sigdelset(&blocked_signals, SIGSTOP))
+	{
+		perror("udploggerclientlib.c sigdelset()");
+		return -1;
+	}
+
+	/*
+	 * Block all of the signals in blocked_signals from being delivered to this
+	 * process.  Save the current/original signal mask of this process
+	 * to original_signal_mask.
+	 */
+	if (sigemptyset(&original_signal_mask))
+	{
+		perror("udploggerclientlib.c sigemptyset()");
+		return -1;
+	}
+	if (sigprocmask(SIG_BLOCK, &blocked_signals, &original_signal_mask))
+	{
+		perror("udploggerclientlib.c sigprocmask()");
+		return -1;
+	}
+
+	/*
+	 * Clear out the list of signals that have been received by this process,
+	 * so that every signal reads as "not received".
+	 */
+	if (sigemptyset(&signal_flags))
+	{
+		perror("udploggerclientlib.c sigemptyset()");
+		return -1;
+	}
+
+	/*
+	 * Install signal handlers that will record the receipt of signals that
+	 * we are interested in.
+	 */
+	if (signal(SIGALRM, sig_handler) == SIG_ERR)
+	{
+		perror("udploggerclientlib.c signal(SIGALRM)");
+		return -1;
+	}
 	if (signal(SIGTERM, sig_handler) == SIG_ERR)
 	{
 		perror("udploggerclientlib.c signal(SIGTERM)");
@@ -141,51 +193,73 @@ int main (int argc, char **argv)
 	strncpy(beacon, BEACON_STRING, BEACON_PACKET_SIZE);
 	beacon[BEACON_PACKET_SIZE - 1] = '\0';
 
-	memset(&timeout, 0, sizeof(timeout));
+	/*
+	 * Send an ALARM signal to ourselves so that we immediately broadcast a beacon
+	 * on startup.  Note that this signal is currently blocked but will be delivered
+	 * as soon as we unblock signals (i.e. on pselect).
+	 */
+	raise(SIGALRM);
 
 	FD_ZERO(&all_set);
 	FD_SET(fd, &all_set);
 	while (1)
 	{
 		read_set = all_set;
-		result = select(fd+1, &read_set, NULL, NULL, &timeout);
+		/*
+		 * Wait for either a log packet to arrive or the receipt of a
+		 * signal.
+		 */
+		result = pselect(fd+1, &read_set, NULL, NULL, NULL, &original_signal_mask);
+
 		if (result < 0)
 		{
 			/*
-			 * Do not die on select() failures if we were just interrupted by a
-			 * signal.
+			 * If we were not interrupted by a signal, die with a pselect() error.
 			 */
 			if (errno != EINTR)
 			{
-				perror("udploggerclientlib.c select()");
+				perror("udploggerclientlib.c pselect()");
 				return -1;
 			}
+
+			/*
+			 * If we have received a SIGALRM, send out a beacon and then start another
+			 * alarm counter so that it will trigger to send out the next one.
+			 */
+			if (sigismember(&signal_flags, SIGALRM))
+			{
+				log_host_ptr = &udploggerclientlib_conf.log_host;
+				do
+				{
+					sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
+				} while ((log_host_ptr = log_host_ptr->next));
+				alarm(udploggerclientlib_conf.beacon_interval);
+			}
+
 			handle_signal_hook(&signal_flags);
 		}
-		else if (result == 0)
+		else if (FD_ISSET(fd, &read_set))
 		{
-			timeout.tv_sec = udploggerclientlib_conf.beacon_interval;
-			timeout.tv_usec = 0L;
-			log_host_ptr = &udploggerclientlib_conf.log_host;
-			do
+			if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
 			{
-				sendto(fd, beacon, BEACON_PACKET_SIZE, 0, (struct sockaddr *)&log_host_ptr->address, sizeof(log_host_ptr->address));
-			} while ((log_host_ptr = log_host_ptr->next));
-		}
-		else if (result > 0)
-		{
-			if (FD_ISSET(fd, &read_set))
-			{
-				if (recvfrom(fd, buffer, PACKET_MAXIMUM_SIZE, 0, (struct sockaddr *)&sender, &senderlen) >= 0)
-				{
-					buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
-					log_packet_hook(&sender, buffer);
-				}
+				buffer[PACKET_MAXIMUM_SIZE - 1] = '\0';
+				log_packet_hook(&sender, buffer);
 			}
 		}
+
 		if (sigismember(&signal_flags, SIGTERM))
 		{
 			break;
+		}
+
+		/*
+		 * Clear out the list of signals that have been received by this process,
+		 * so that every signal reads as "not received".
+		 */
+		if (sigemptyset(&signal_flags))
+		{
+			perror("udploggerclientlib.c sigemptyset()");
+			return -1;
 		}
 	}
 
@@ -660,5 +734,8 @@ static void sig_handler(int signal_number)
 	#ifdef __DEBUG__
 		printf("udploggerclientlib.c debug: received signal %d\n", signal_number);
 	#endif
-	sigaddset(&signal_flags, signal_number);
+	if (sigaddset(&signal_flags, signal_number))
+	{
+		perror("udploggerclientlib.c sigaddset()");
+	}
 }

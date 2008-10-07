@@ -117,7 +117,7 @@ extern int getopt_hook(char);
  * Implemented in udplogger clients to handle any signals that are marked as received in
  * the sigset_t <signal flags>.
  **/
-extern void inline handle_signal_hook(sigset_t *);
+extern void handle_signal_hook(sigset_t *);
 
 
 /**

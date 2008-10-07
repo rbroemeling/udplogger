@@ -46,7 +46,7 @@ struct udploggercat_configuration_t {
 
 int add_option_hook();
 int getopt_hook(char);
-void inline handle_signal_hook(sigset_t *);
+void handle_signal_hook(sigset_t *);
 void inline log_packet_hook(struct sockaddr_in *, char *);
 void usage_hook();
 
@@ -145,7 +145,7 @@ int getopt_hook(char i)
 }
 
 
-void inline handle_signal_hook(sigset_t *signal_flags)
+void handle_signal_hook(sigset_t *signal_flags)
 {
 	FILE *reopened_log_destination = NULL;
 
