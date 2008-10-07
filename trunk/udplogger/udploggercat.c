@@ -149,31 +149,55 @@ void handle_signal_hook(sigset_t *signal_flags)
 {
 	FILE *reopened_log_destination = NULL;
 
-	if (sigismember(signal_flags, SIGHUP) && (udploggercat_conf.log_destination_path != NULL))
+	if (sigismember(signal_flags, SIGHUP))
 	{
-		reopened_log_destination = fopen(udploggercat_conf.log_destination_path, "a");
-		if (reopened_log_destination == NULL)
+		if (udploggercat_conf.log_destination_path != NULL)
 		{
-			perror("udploggercat.c fopen()");
-			fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
+			#ifdef __DEBUG__
+				printf("udploggercat.c debug: HUP received, re-opening log destination '%s'\n", udploggercat_conf.log_destination_path);
+			#endif
+			reopened_log_destination = fopen(udploggercat_conf.log_destination_path, "a");
+			if (reopened_log_destination == NULL)
+			{
+				perror("udploggercat.c fopen()");
+				fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
+			}
+			else
+			{
+				if (fclose(udploggercat_conf.log_destination))
+				{
+					perror("udploggercat.c fclose()");
+				}
+				udploggercat_conf.log_destination = reopened_log_destination;
+			}
+			reopened_log_destination = NULL;
 		}
 		else
 		{
-			if (fclose(udploggercat_conf.log_destination) != 0)
+			#ifdef __DEBUG__
+				printf("udploggercat.c debug: HUP received, not re-opening logs because log_destination_path is null\n");
+			#endif
+		}
+	}
+	if (sigismember(signal_flags, SIGTERM))
+	{
+		if (udploggercat_conf.log_destination_path != NULL)
+		{
+			#ifdef __DEBUG__
+				printf("udploggercat.c debug: TERM received, closing log destination '%s'\n", udploggercat_conf.log_destination_path);
+			#endif
+			if (fclose(udploggercat_conf.log_destination))
 			{
 				perror("udploggercat.c fclose()");
 			}
-			udploggercat_conf.log_destination = reopened_log_destination;
+			udploggercat_conf.log_destination = NULL;
 		}
-		reopened_log_destination = NULL;
-	}
-	if (sigismember(signal_flags, SIGTERM) && (udploggercat_conf.log_destination_path != NULL))
-	{
-		if (fclose(udploggercat_conf.log_destination) != 0)
+		else
 		{
-			perror("udploggercat.c fclose()");
+			#ifdef __DEBUG__
+				printf("udploggercat.c debug: TERM received, not closing log destination because log_destination_path is null\n");
+			#endif
 		}
-		udploggercat_conf.log_destination = NULL;
 	}
 }
 

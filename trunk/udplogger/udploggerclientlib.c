@@ -228,6 +228,9 @@ int main (int argc, char **argv)
 			 */
 			if (sigismember(&signal_flags, SIGALRM))
 			{
+				#ifdef __DEBUG__
+					printf("udploggerclientlib.c debug: ALRM received, sending beacon\n");
+				#endif
 				log_host_ptr = &udploggerclientlib_conf.log_host;
 				do
 				{
@@ -249,6 +252,9 @@ int main (int argc, char **argv)
 
 		if (sigismember(&signal_flags, SIGTERM))
 		{
+			#ifdef __DEBUG__
+				printf("udploggerclientlib.c debug: TERM received, exiting normally\n");
+			#endif
 			break;
 		}
 
