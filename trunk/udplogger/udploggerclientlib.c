@@ -253,7 +253,7 @@ int main (int argc, char **argv)
 		if (sigismember(&signal_flags, SIGTERM))
 		{
 			#ifdef __DEBUG__
-				printf("udploggerclientlib.c debug: TERM received, exiting normally\n");
+				printf("udploggerclientlib.c debug: exiting normally\n");
 			#endif
 			break;
 		}
