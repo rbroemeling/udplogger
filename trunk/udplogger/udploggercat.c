@@ -111,9 +111,9 @@ int getopt_hook(char i)
 			else
 			{
 				udploggercat_conf.delimiter_character = optarg[0];
-#ifdef __DEBUG__
-				printf("udploggercat.c debug: setting delimiter to '%c' (0x%x)\n", udploggercat_conf.delimiter_character, udploggercat_conf.delimiter_character);
-#endif
+				#ifdef __DEBUG__
+					printf("udploggercat.c debug: setting delimiter to '%c' (0x%x)\n", udploggercat_conf.delimiter_character, udploggercat_conf.delimiter_character);
+				#endif
 				return 1;
 			}
 		case 'f':
@@ -132,16 +132,16 @@ int getopt_hook(char i)
 						perror("udploggercat.c strdup()");
 						return -1;
 					}
-#ifdef __DEBUG__
-					printf("udploggercat.c debug: setting log file format specification to '%s'\n", udploggercat_conf.log_destination_format);
-#endif
+					#ifdef __DEBUG__
+						printf("udploggercat.c debug: setting log file format specification to '%s'\n", udploggercat_conf.log_destination_format);
+					#endif
 				}
 			}
 			else
 			{
-#ifdef __DEBUG__
-				printf("udploggercat.c debug: setting output file to stdout\n");
-#endif
+				#ifdef __DEBUG__
+					printf("udploggercat.c debug: setting output file to stdout\n");
+				#endif
 			}
 			return 1;
 		case 's':
@@ -154,9 +154,9 @@ int getopt_hook(char i)
 			else
 			{
 				udploggercat_conf.status_filter = uint_tmp;
-#ifdef __DEBUG__
-				printf("udploggercat.c debug: setting status_filter to '%hu'\n", udploggercat_conf.status_filter);
-#endif
+				#ifdef __DEBUG__
+					printf("udploggercat.c debug: setting status_filter to '%hu'\n", udploggercat_conf.status_filter);
+				#endif
 				return 1;
 			}
 		case 'u':
@@ -168,9 +168,9 @@ int getopt_hook(char i)
 			}
 			else
 			{
-#ifdef __DEBUG__
-				printf("udploggercat.c debug: setting request_url_filter to '%s'\n", optarg);
-#endif
+				#ifdef __DEBUG__
+					printf("udploggercat.c debug: setting request_url_filter to '%s'\n", optarg);
+				#endif
 				return 1;
 			}
 	}
