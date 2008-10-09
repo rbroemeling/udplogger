@@ -25,29 +25,34 @@ size_t strnlen(const char *, size_t);
 
 
 /*
+ * The size of the memory to allocate for working with time string buffers.  This
+ * is used to store the current timestamp in a string for easy printing and also
+ * defines the maximum length of udploggercat_conf.log_destination_path, which is based
+ * on udploggercat_conf.log_destination_format.
+ */
+#define TIME_STRING_BUFFER_SIZE 513U
+
+
+/*
  * Structure that contains configuration information for the running instance
  * of this udploggercat client program.
  */
 struct udploggercat_configuration_t {
 	unsigned char delimiter_character;
 	FILE *log_destination;
-	char *log_destination_path;
+	char *log_destination_format;
+	char log_destination_path[TIME_STRING_BUFFER_SIZE];
 	pcre *request_url_filter;
 	uint16_t status_filter;
 } udploggercat_conf;
 
 
-/*
- * The size of the memory to allocate for the time string buffer, which stores
- * the current timestamp in a string for easy printing.
- */
-#define TIME_STRING_BUFFER_SIZE 40U
-
-
 int add_option_hook();
+static void close_log_file();
 int getopt_hook(char);
 void handle_signal_hook(sigset_t *);
 void inline log_packet_hook(struct sockaddr_in *, char *);
+static int open_log_file(char *);
 void usage_hook();
 
 
@@ -55,7 +60,8 @@ int add_option_hook()
 {
 	udploggercat_conf.delimiter_character = DELIMITER_CHARACTER;
 	udploggercat_conf.log_destination = stdout;
-	udploggercat_conf.log_destination_path = NULL;
+	udploggercat_conf.log_destination_format = NULL;
+	memset(udploggercat_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
 	udploggercat_conf.request_url_filter = NULL;
 	udploggercat_conf.status_filter = 0;
 	return
@@ -65,6 +71,26 @@ int add_option_hook()
 		add_option("request_url_filter", required_argument, 'u') &&
 		add_option("status_filter", required_argument, 's')
 	);
+}
+
+
+static void close_log_file()
+{
+	if (strnlen(udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
+	{
+		#ifdef __DEBUG__
+			printf("udploggercat.c debug: closing log destination '%s'\n", udploggercat_conf.log_destination_path);
+		#endif
+		memset(udploggercat_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
+	}
+	if (udploggercat_conf.log_destination != stdout)
+	{
+		if (fclose(udploggercat_conf.log_destination))
+		{
+			perror("udploggercat.c fclose()");
+		}
+		udploggercat_conf.log_destination = stdout;
+	}
 }
 
 
@@ -93,23 +119,30 @@ int getopt_hook(char i)
 		case 'f':
 			if (strcmp("-", optarg))
 			{
-				udploggercat_conf.log_destination_path = strdup(optarg);
-				if (udploggercat_conf.log_destination_path == NULL)
+				if (strlen(optarg) >= TIME_STRING_BUFFER_SIZE)
 				{
-					perror("udploggercat.c strdup()");
+					fprintf(stderr, "udploggercat.c log file format specification is too long, maximum length is %du characters\n", TIME_STRING_BUFFER_SIZE - 1);
 					return -1;
 				}
-				udploggercat_conf.log_destination = fopen(udploggercat_conf.log_destination_path, "a");
-				if (udploggercat_conf.log_destination == NULL)
+				else
 				{
-					perror("udploggercat.c fopen()");
-					fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
-					return -1;
+					udploggercat_conf.log_destination_format = strdup(optarg);
+					if (udploggercat_conf.log_destination_format == NULL)
+					{
+						perror("udploggercat.c strdup()");
+						return -1;
+					}
+#ifdef __DEBUG__
+					printf("udploggercat.c debug: setting log file format specification to '%s'\n", udploggercat_conf.log_destination_format);
+#endif
 				}
 			}
+			else
+			{
 #ifdef __DEBUG__
-			printf("udploggercat.c debug: setting output file to '%s'\n", udploggercat_conf.log_destination_path);
+				printf("udploggercat.c debug: setting output file to stdout\n");
 #endif
+			}
 			return 1;
 		case 's':
 			uint_tmp = strtoumax(optarg, 0, 10);
@@ -147,57 +180,23 @@ int getopt_hook(char i)
 
 void handle_signal_hook(sigset_t *signal_flags)
 {
-	FILE *reopened_log_destination = NULL;
 
 	if (sigismember(signal_flags, SIGHUP))
 	{
-		if (udploggercat_conf.log_destination_path != NULL)
+		#ifdef __DEBUG__
+			printf("udploggercat.c debug: HUP received\n");
+		#endif
+		if (strnlen(udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
 		{
-			#ifdef __DEBUG__
-				printf("udploggercat.c debug: HUP received, re-opening log destination '%s'\n", udploggercat_conf.log_destination_path);
-			#endif
-			reopened_log_destination = fopen(udploggercat_conf.log_destination_path, "a");
-			if (reopened_log_destination == NULL)
-			{
-				perror("udploggercat.c fopen()");
-				fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", udploggercat_conf.log_destination_path);
-			}
-			else
-			{
-				if (fclose(udploggercat_conf.log_destination))
-				{
-					perror("udploggercat.c fclose()");
-				}
-				udploggercat_conf.log_destination = reopened_log_destination;
-			}
-			reopened_log_destination = NULL;
-		}
-		else
-		{
-			#ifdef __DEBUG__
-				printf("udploggercat.c debug: HUP received, not re-opening logs because log_destination_path is null\n");
-			#endif
+			open_log_file(udploggercat_conf.log_destination_path);
 		}
 	}
 	if (sigismember(signal_flags, SIGTERM))
 	{
-		if (udploggercat_conf.log_destination_path != NULL)
-		{
-			#ifdef __DEBUG__
-				printf("udploggercat.c debug: TERM received, closing log destination '%s'\n", udploggercat_conf.log_destination_path);
-			#endif
-			if (fclose(udploggercat_conf.log_destination))
-			{
-				perror("udploggercat.c fclose()");
-			}
-			udploggercat_conf.log_destination = NULL;
-		}
-		else
-		{
-			#ifdef __DEBUG__
-				printf("udploggercat.c debug: TERM received, not closing log destination because log_destination_path is null\n");
-			#endif
-		}
+		#ifdef __DEBUG__
+			printf("udploggercat.c debug: TERM received\n");
+		#endif
+		close_log_file();
 	}
 }
 
@@ -209,6 +208,7 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	static char current_time_str[TIME_STRING_BUFFER_SIZE];
 	int i;
 	static struct log_entry_t log_data;
+	static char new_log_destination_path[TIME_STRING_BUFFER_SIZE];
 	static int ovector[OVECCOUNT];
 
 	/*
@@ -248,6 +248,17 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 		}
 		strftime(current_time_str, TIME_STRING_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &current_time);
 		current_time_str[TIME_STRING_BUFFER_SIZE - 1] = '\0';
+
+		/* Update our log file destination path (if necessary). */
+		if (udploggercat_conf.log_destination_format != NULL)
+		{
+			strftime(new_log_destination_path, TIME_STRING_BUFFER_SIZE, udploggercat_conf.log_destination_format, &current_time);
+			new_log_destination_path[TIME_STRING_BUFFER_SIZE - 1] = '\0';
+			if (strncmp(new_log_destination_path, udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE))
+			{
+				open_log_file(new_log_destination_path);
+			}
+		}
 	}
 
 	/* Format the log line for output. */
@@ -266,11 +277,34 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 }
 
 
+static int open_log_file(char *log_file_path)
+{
+	FILE *new_log_destination = NULL;
+
+	#ifdef __DEBUG__
+		printf("udploggercat.c debug: changing log destination to '%s'\n", log_file_path);
+	#endif
+	new_log_destination = fopen(log_file_path, "a");
+	if (new_log_destination == NULL)
+	{
+		perror("udploggercat.c fopen()");
+		fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", log_file_path);
+		return 0;
+	}
+	close_log_file();
+	udploggercat_conf.log_destination = new_log_destination;
+	strncpy(udploggercat_conf.log_destination_path, log_file_path, TIME_STRING_BUFFER_SIZE);
+	udploggercat_conf.log_destination_path[TIME_STRING_BUFFER_SIZE - 1] = '\0';
+	return 1;
+}
+
+
 void usage_hook()
 {
 	printf("  -d, --delimiter <delim>           set the delimiter to be used in-between log fields\n");
 	printf("                                    (defaults to character 0x%x)\n", DELIMITER_CHARACTER);
 	printf("  -f, --file <file>                 send log data to the file <file> (use `-' for stdout, which is the default)\n");
+	printf("                                    <file> can be a format specification and supports conversion specifications as per strftime(3)\n");
 	printf("  -u, --request_url_filter <pcre>   only display log lines whose request_url field matches <pcre>\n");
 	printf("  -s, --status_filter <status>      only display log lines whose status field matches <status>\n");
 }
