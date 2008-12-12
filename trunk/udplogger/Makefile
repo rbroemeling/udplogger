@@ -34,4 +34,4 @@ udploggerd: beacon.o socket.o trim.o udploggerd.o
 	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
 
 udploggerc: udploggerclientlib.o udploggerclientparselib.o udploggerc.o socket.o
-	${CC}   ${^} ${LDLIBS} -lpcre -o ${@}
+	${CC}   ${^} ${LDLIBS} -o ${@}

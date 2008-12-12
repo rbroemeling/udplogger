@@ -1,7 +1,6 @@
 #include <arpa/inet.h>
 #include <getopt.h>
 #include <inttypes.h>
-#include <pcre.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,13 +14,6 @@
  * but ISO C90 doesn't allow us to use _GNU_SOURCE before including <string.h>.
  */
 size_t strnlen(const char *, size_t);
-
-
-/*
- * Number of elements to use in the ovector for pcre result substrings.
- * Should be a multiple of 3.
- */
-#define OVECCOUNT 3
 
 
 /*
@@ -42,8 +34,6 @@ struct udploggerc_configuration_t {
 	FILE *log_destination;
 	char *log_destination_format;
 	char log_destination_path[TIME_STRING_BUFFER_SIZE];
-	pcre *request_url_filter;
-	uint16_t status_filter;
 } udploggerc_conf;
 
 
@@ -62,14 +52,10 @@ int add_option_hook()
 	udploggerc_conf.log_destination = stdout;
 	udploggerc_conf.log_destination_format = NULL;
 	memset(udploggerc_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
-	udploggerc_conf.request_url_filter = NULL;
-	udploggerc_conf.status_filter = 0;
 	return
 	(
 		add_option("delimiter", required_argument, 'd') &&
-		add_option("file", required_argument, 'f') &&
-		add_option("request_url_filter", required_argument, 'u') &&
-		add_option("status_filter", required_argument, 's')
+		add_option("file", required_argument, 'f')
 	);
 }
 
@@ -96,10 +82,6 @@ static void close_log_file()
 
 int getopt_hook(char i)
 {
-	const char *pcre_error;
-	int pcre_error_offset;
-	uintmax_t uint_tmp;
-
 	switch (i)
 	{
 		case 'd':
@@ -144,35 +126,6 @@ int getopt_hook(char i)
 				#endif
 			}
 			return 1;
-		case 's':
-			uint_tmp = strtoumax(optarg, 0, 10);
-			if (! uint_tmp || uint_tmp == UINT_MAX || uint_tmp > 65535)
-			{
-				fprintf(stderr, "udploggerc.c invalid status filter '%s'\n", optarg);
-				return -1;
-			}
-			else
-			{
-				udploggerc_conf.status_filter = uint_tmp;
-				#ifdef __DEBUG__
-					printf("udploggerc.c debug: setting status_filter to '%hu'\n", udploggerc_conf.status_filter);
-				#endif
-				return 1;
-			}
-		case 'u':
-			udploggerc_conf.request_url_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
-			if (udploggerc_conf.request_url_filter == NULL)
-			{
-				fprintf(stderr, "udploggerc.c invalid request_url_filter pattern at offset %d: %s\n", pcre_error_offset, pcre_error);
-				return -1;
-			}
-			else
-			{
-				#ifdef __DEBUG__
-					printf("udploggerc.c debug: setting request_url_filter to '%s'\n", optarg);
-				#endif
-				return 1;
-			}
 	}
 	return 0;
 }
@@ -209,7 +162,6 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	int i;
 	static struct log_entry_t log_data;
 	static char new_log_destination_path[TIME_STRING_BUFFER_SIZE];
-	static int ovector[OVECCOUNT];
 
 	/*
 	 * Parse the log line into the structure log_data.  This is only used if filters are in-place, but we do it all the time
@@ -217,20 +169,6 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	 */
 	bzero(&log_data, sizeof(log_data));
 	parse_log_line(line, &log_data);
-
-	/* Filter out anything that we do not want to display. */
-	if (udploggerc_conf.request_url_filter != NULL)
-	{
-		i = pcre_exec(udploggerc_conf.request_url_filter, NULL, log_data.request_url, strlen(log_data.request_url), 0, 0, ovector, OVECCOUNT);
-		if (i < 0)
-		{
-			return;
-		}
-	}
-	if (udploggerc_conf.status_filter && (udploggerc_conf.status_filter != log_data.status))
-	{
-		return;
-	}
 
 	/* Update our timestamp string (if necessary). */
 	if ((! current_timestamp) || (current_timestamp != time(NULL)))
@@ -305,6 +243,4 @@ void usage_hook()
 	printf("                                    (defaults to character 0x%x)\n", DELIMITER_CHARACTER);
 	printf("  -f, --file <file>                 send log data to the file <file> (use `-' for stdout, which is the default)\n");
 	printf("                                    <file> can be a format specification and supports conversion specifications as per strftime(3)\n");
-	printf("  -u, --request_url_filter <pcre>   only display log lines whose request_url field matches <pcre>\n");
-	printf("  -s, --status_filter <status>      only display log lines whose status field matches <status>\n");
 }
