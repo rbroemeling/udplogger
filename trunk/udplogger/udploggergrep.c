@@ -3,6 +3,7 @@
 #include <pcre.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include "udplogger.h"
 #include "udploggerparselib.h"
@@ -35,6 +36,7 @@ int main (int argc, char **argv)
 	size_t line_buffer_length = 0;
 	ssize_t line_length = 0;
 	struct log_entry_t log_data;
+	static int ovector[OVECCOUNT];
 	int result = 0;
 
 	result = arguments_parse(argc, argv);
@@ -46,6 +48,30 @@ int main (int argc, char **argv)
 	while ((line_length = getline(&line, &line_buffer_length, stdin)) != -1)
 	{
 		parse_log_line(line, &log_data);
+
+		/* Filter out anything that we do not want to display. */
+		if (udploggergrep_conf.status_filter && (udploggergrep_conf.status_filter != log_data.status))
+		{
+			continue;
+		}
+		if (udploggergrep_conf.query_filter != NULL)
+		{
+			result = pcre_exec(udploggergrep_conf.query_filter, NULL, log_data.query_string, strlen(log_data.query_string), 0, 0, ovector, OVECCOUNT);
+			if (result < 0)
+			{
+				continue;
+			}
+		}
+		if (udploggergrep_conf.url_filter != NULL)
+		{
+			result = pcre_exec(udploggergrep_conf.url_filter, NULL, log_data.request_url, strlen(log_data.request_url), 0, 0, ovector, OVECCOUNT);
+			if (result < 0)
+			{
+				continue;
+			}
+		}
+
+		printf("%s", line);
 	}
 	return 0;
 }
