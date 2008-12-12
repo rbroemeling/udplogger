@@ -24,7 +24,7 @@
  *
  * Preferrably the log_packet_hook function should be kept simple enough to be inlined.
  *
- * See 'udploggercat.c' for a simple example.
+ * See 'udploggerc.c' for a simple example.
  */
 
 

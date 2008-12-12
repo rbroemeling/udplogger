@@ -27,24 +27,24 @@ size_t strnlen(const char *, size_t);
 /*
  * The size of the memory to allocate for working with time string buffers.  This
  * is used to store the current timestamp in a string for easy printing and also
- * defines the maximum length of udploggercat_conf.log_destination_path, which is based
- * on udploggercat_conf.log_destination_format.
+ * defines the maximum length of udploggerc_conf.log_destination_path, which is based
+ * on udploggerc_conf.log_destination_format.
  */
 #define TIME_STRING_BUFFER_SIZE 513U
 
 
 /*
  * Structure that contains configuration information for the running instance
- * of this udploggercat client program.
+ * of this udploggerc client program.
  */
-struct udploggercat_configuration_t {
+struct udploggerc_configuration_t {
 	unsigned char delimiter_character;
 	FILE *log_destination;
 	char *log_destination_format;
 	char log_destination_path[TIME_STRING_BUFFER_SIZE];
 	pcre *request_url_filter;
 	uint16_t status_filter;
-} udploggercat_conf;
+} udploggerc_conf;
 
 
 int add_option_hook();
@@ -58,12 +58,12 @@ void usage_hook();
 
 int add_option_hook()
 {
-	udploggercat_conf.delimiter_character = DELIMITER_CHARACTER;
-	udploggercat_conf.log_destination = stdout;
-	udploggercat_conf.log_destination_format = NULL;
-	memset(udploggercat_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
-	udploggercat_conf.request_url_filter = NULL;
-	udploggercat_conf.status_filter = 0;
+	udploggerc_conf.delimiter_character = DELIMITER_CHARACTER;
+	udploggerc_conf.log_destination = stdout;
+	udploggerc_conf.log_destination_format = NULL;
+	memset(udploggerc_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
+	udploggerc_conf.request_url_filter = NULL;
+	udploggerc_conf.status_filter = 0;
 	return
 	(
 		add_option("delimiter", required_argument, 'd') &&
@@ -76,20 +76,20 @@ int add_option_hook()
 
 static void close_log_file()
 {
-	if (strnlen(udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
+	if (strnlen(udploggerc_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
 	{
 		#ifdef __DEBUG__
-			printf("udploggercat.c debug: closing log destination '%s'\n", udploggercat_conf.log_destination_path);
+			printf("udploggerc.c debug: closing log destination '%s'\n", udploggerc_conf.log_destination_path);
 		#endif
-		memset(udploggercat_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
+		memset(udploggerc_conf.log_destination_path, '\0', TIME_STRING_BUFFER_SIZE * sizeof(char));
 	}
-	if (udploggercat_conf.log_destination != stdout)
+	if (udploggerc_conf.log_destination != stdout)
 	{
-		if (fclose(udploggercat_conf.log_destination))
+		if (fclose(udploggerc_conf.log_destination))
 		{
-			perror("udploggercat.c fclose()");
+			perror("udploggerc.c fclose()");
 		}
-		udploggercat_conf.log_destination = stdout;
+		udploggerc_conf.log_destination = stdout;
 	}
 }
 
@@ -105,14 +105,14 @@ int getopt_hook(char i)
 		case 'd':
 			if (strlen(optarg) != 1)
 			{
-				fprintf(stderr, "udploggercat.c invalid delimiter '%s'\n", optarg);
+				fprintf(stderr, "udploggerc.c invalid delimiter '%s'\n", optarg);
 				return -1;
 			}
 			else
 			{
-				udploggercat_conf.delimiter_character = optarg[0];
+				udploggerc_conf.delimiter_character = optarg[0];
 				#ifdef __DEBUG__
-					printf("udploggercat.c debug: setting delimiter to '%c' (0x%x)\n", udploggercat_conf.delimiter_character, udploggercat_conf.delimiter_character);
+					printf("udploggerc.c debug: setting delimiter to '%c' (0x%x)\n", udploggerc_conf.delimiter_character, udploggerc_conf.delimiter_character);
 				#endif
 				return 1;
 			}
@@ -121,26 +121,26 @@ int getopt_hook(char i)
 			{
 				if (strlen(optarg) >= TIME_STRING_BUFFER_SIZE)
 				{
-					fprintf(stderr, "udploggercat.c log file format specification is too long, maximum length is %du characters\n", TIME_STRING_BUFFER_SIZE - 1);
+					fprintf(stderr, "udploggerc.c log file format specification is too long, maximum length is %du characters\n", TIME_STRING_BUFFER_SIZE - 1);
 					return -1;
 				}
 				else
 				{
-					udploggercat_conf.log_destination_format = strdup(optarg);
-					if (udploggercat_conf.log_destination_format == NULL)
+					udploggerc_conf.log_destination_format = strdup(optarg);
+					if (udploggerc_conf.log_destination_format == NULL)
 					{
-						perror("udploggercat.c strdup()");
+						perror("udploggerc.c strdup()");
 						return -1;
 					}
 					#ifdef __DEBUG__
-						printf("udploggercat.c debug: setting log file format specification to '%s'\n", udploggercat_conf.log_destination_format);
+						printf("udploggerc.c debug: setting log file format specification to '%s'\n", udploggerc_conf.log_destination_format);
 					#endif
 				}
 			}
 			else
 			{
 				#ifdef __DEBUG__
-					printf("udploggercat.c debug: setting output file to stdout\n");
+					printf("udploggerc.c debug: setting output file to stdout\n");
 				#endif
 			}
 			return 1;
@@ -148,28 +148,28 @@ int getopt_hook(char i)
 			uint_tmp = strtoumax(optarg, 0, 10);
 			if (! uint_tmp || uint_tmp == UINT_MAX || uint_tmp > 65535)
 			{
-				fprintf(stderr, "udploggercat.c invalid status filter '%s'\n", optarg);
+				fprintf(stderr, "udploggerc.c invalid status filter '%s'\n", optarg);
 				return -1;
 			}
 			else
 			{
-				udploggercat_conf.status_filter = uint_tmp;
+				udploggerc_conf.status_filter = uint_tmp;
 				#ifdef __DEBUG__
-					printf("udploggercat.c debug: setting status_filter to '%hu'\n", udploggercat_conf.status_filter);
+					printf("udploggerc.c debug: setting status_filter to '%hu'\n", udploggerc_conf.status_filter);
 				#endif
 				return 1;
 			}
 		case 'u':
-			udploggercat_conf.request_url_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
-			if (udploggercat_conf.request_url_filter == NULL)
+			udploggerc_conf.request_url_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
+			if (udploggerc_conf.request_url_filter == NULL)
 			{
-				fprintf(stderr, "udploggercat.c invalid request_url_filter pattern at offset %d: %s\n", pcre_error_offset, pcre_error);
+				fprintf(stderr, "udploggerc.c invalid request_url_filter pattern at offset %d: %s\n", pcre_error_offset, pcre_error);
 				return -1;
 			}
 			else
 			{
 				#ifdef __DEBUG__
-					printf("udploggercat.c debug: setting request_url_filter to '%s'\n", optarg);
+					printf("udploggerc.c debug: setting request_url_filter to '%s'\n", optarg);
 				#endif
 				return 1;
 			}
@@ -184,17 +184,17 @@ void handle_signal_hook(sigset_t *signal_flags)
 	if (sigismember(signal_flags, SIGHUP))
 	{
 		#ifdef __DEBUG__
-			printf("udploggercat.c debug: HUP received\n");
+			printf("udploggerc.c debug: HUP received\n");
 		#endif
-		if (strnlen(udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
+		if (strnlen(udploggerc_conf.log_destination_path, TIME_STRING_BUFFER_SIZE) > 0)
 		{
-			open_log_file(udploggercat_conf.log_destination_path);
+			open_log_file(udploggerc_conf.log_destination_path);
 		}
 	}
 	if (sigismember(signal_flags, SIGTERM))
 	{
 		#ifdef __DEBUG__
-			printf("udploggercat.c debug: TERM received\n");
+			printf("udploggerc.c debug: TERM received\n");
 		#endif
 		close_log_file();
 	}
@@ -219,15 +219,15 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	parse_log_line(line, &log_data);
 
 	/* Filter out anything that we do not want to display. */
-	if (udploggercat_conf.request_url_filter != NULL)
+	if (udploggerc_conf.request_url_filter != NULL)
 	{
-		i = pcre_exec(udploggercat_conf.request_url_filter, NULL, log_data.request_url, strlen(log_data.request_url), 0, 0, ovector, OVECCOUNT);
+		i = pcre_exec(udploggerc_conf.request_url_filter, NULL, log_data.request_url, strlen(log_data.request_url), 0, 0, ovector, OVECCOUNT);
 		if (i < 0)
 		{
 			return;
 		}
 	}
-	if (udploggercat_conf.status_filter && (udploggercat_conf.status_filter != log_data.status))
+	if (udploggerc_conf.status_filter && (udploggerc_conf.status_filter != log_data.status))
 	{
 		return;
 	}
@@ -238,23 +238,23 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 		current_timestamp = time(NULL);
 		if (current_timestamp == (time_t)-1)
 		{
-			perror("udploggercat.c time()");
+			perror("udploggerc.c time()");
 			return;
 		}
 		if (localtime_r(&current_timestamp, &current_time) == NULL)
 		{
-			perror("udploggercat.c localtime_r()");
+			perror("udploggerc.c localtime_r()");
 			return;
 		}
 		strftime(current_time_str, TIME_STRING_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &current_time);
 		current_time_str[TIME_STRING_BUFFER_SIZE - 1] = '\0';
 
 		/* Update our log file destination path (if necessary). */
-		if (udploggercat_conf.log_destination_format != NULL)
+		if (udploggerc_conf.log_destination_format != NULL)
 		{
-			strftime(new_log_destination_path, TIME_STRING_BUFFER_SIZE, udploggercat_conf.log_destination_format, &current_time);
+			strftime(new_log_destination_path, TIME_STRING_BUFFER_SIZE, udploggerc_conf.log_destination_format, &current_time);
 			new_log_destination_path[TIME_STRING_BUFFER_SIZE - 1] = '\0';
-			if (strncmp(new_log_destination_path, udploggercat_conf.log_destination_path, TIME_STRING_BUFFER_SIZE))
+			if (strncmp(new_log_destination_path, udploggerc_conf.log_destination_path, TIME_STRING_BUFFER_SIZE))
 			{
 				open_log_file(new_log_destination_path);
 			}
@@ -262,18 +262,18 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	}
 
 	/* Format the log line for output. */
-	if (udploggercat_conf.delimiter_character != DELIMITER_CHARACTER)
+	if (udploggerc_conf.delimiter_character != DELIMITER_CHARACTER)
 	{
 		for (i = 0; i < strnlen(line, PACKET_MAXIMUM_SIZE); i++)
 		{
 			if (line[i] == DELIMITER_CHARACTER)
 			{
-				line[i] = udploggercat_conf.delimiter_character;
+				line[i] = udploggerc_conf.delimiter_character;
 			}
 		}
 	}
 
-	fprintf(udploggercat_conf.log_destination, "%s%c[%s:%hu]%c%s\n", current_time_str, udploggercat_conf.delimiter_character, inet_ntoa(sender->sin_addr), ntohs(sender->sin_port), udploggercat_conf.delimiter_character, line);
+	fprintf(udploggerc_conf.log_destination, "%s%c[%s:%hu]%c%s\n", current_time_str, udploggerc_conf.delimiter_character, inet_ntoa(sender->sin_addr), ntohs(sender->sin_port), udploggerc_conf.delimiter_character, line);
 }
 
 
@@ -282,19 +282,19 @@ static int open_log_file(char *log_file_path)
 	FILE *new_log_destination = NULL;
 
 	#ifdef __DEBUG__
-		printf("udploggercat.c debug: changing log destination to '%s'\n", log_file_path);
+		printf("udploggerc.c debug: changing log destination to '%s'\n", log_file_path);
 	#endif
 	new_log_destination = fopen(log_file_path, "a");
 	if (new_log_destination == NULL)
 	{
-		perror("udploggercat.c fopen()");
-		fprintf(stderr, "udploggercat.c could not open file '%s' for appending\n", log_file_path);
+		perror("udploggerc.c fopen()");
+		fprintf(stderr, "udploggerc.c could not open file '%s' for appending\n", log_file_path);
 		return 0;
 	}
 	close_log_file();
-	udploggercat_conf.log_destination = new_log_destination;
-	strncpy(udploggercat_conf.log_destination_path, log_file_path, TIME_STRING_BUFFER_SIZE);
-	udploggercat_conf.log_destination_path[TIME_STRING_BUFFER_SIZE - 1] = '\0';
+	udploggerc_conf.log_destination = new_log_destination;
+	strncpy(udploggerc_conf.log_destination_path, log_file_path, TIME_STRING_BUFFER_SIZE);
+	udploggerc_conf.log_destination_path[TIME_STRING_BUFFER_SIZE - 1] = '\0';
 	return 1;
 }
 

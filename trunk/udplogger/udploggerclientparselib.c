@@ -19,10 +19,10 @@
  * static string -> enum mapping.  This is done so that the map_* functions can be used in other places in the
  * codebase (i.e. parsing command-line parameter arguments).
  *
- * See 'udploggercat.c' for a simple example.
+ * See 'udploggerc.c' for a simple example.
  */
- 
- 
+
+
 /*
  * Give a strnlen prototype to stop compiler warnings.  GNU libraries give it to us,
  * but ISO C90 doesn't allow us to use _GNU_SOURCE before including <string.h>.
@@ -130,7 +130,7 @@ enum connection_status_enum map_connection_status(const char *field)
 	return connection_status_unknown;
 }
 
-	
+
 enum request_method_enum map_method(const char *field)
 {
 	if (! strcasecmp(field, "get"))
@@ -140,27 +140,27 @@ enum request_method_enum map_method(const char *field)
 	else if (! strcasecmp(field, "post"))
 	{
 		return request_method_post;
-	}	
+	}
 	else if (! strcasecmp(field, "head"))
 	{
 		return request_method_head;
-	}	
+	}
 	else if (! strcasecmp(field, "options"))
 	{
 		return request_method_options;
-	}	
+	}
 	else if (! strcasecmp(field, "put"))
 	{
 		return request_method_put;
-	}	
+	}
 	else if (! strcasecmp(field, "delete"))
 	{
 		return request_method_delete;
-	}	
+	}
 	else if (! strcasecmp(field, "trace"))
 	{
 		return request_method_trace;
-	}	
+	}
 	else if (! strcasecmp(field, "connect"))
 	{
 		return request_method_connect;
@@ -173,7 +173,7 @@ enum sex_enum map_nexopia_usersex(const char *field)
 	if (! strcasecmp(field, "female"))
 	{
 		return sex_female;
-	}	
+	}
 	else if (! strcasecmp(field, "male"))
 	{
 		return sex_male;
@@ -186,7 +186,7 @@ enum usertype_enum map_nexopia_usertype(const char *field)
 	if (! strcasecmp(field, "anon"))
 	{
 		return usertype_anon;
-	}	
+	}
 	else if (! strcasecmp(field, "user"))
 	{
 		return usertype_user;
@@ -331,7 +331,7 @@ void parse_query_string(const char *field, struct log_entry_t *data)
 	}
 	else
 	{
-		memcpy(&(data->query_string), field, strlen(field) + 1);	
+		memcpy(&(data->query_string), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_query_string('%s') => '%s'\n", field, data->query_string);
