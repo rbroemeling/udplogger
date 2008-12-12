@@ -1,7 +1,8 @@
 #ifndef __UDPLOGGERPARSELIB_H__
 #define __UDPLOGGERPARSELIB_H__
 
-
+#include <arpa/inet.h>
+#include <inttypes.h>
 #include "udplogger.h"
 
 
