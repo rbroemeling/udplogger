@@ -4,7 +4,7 @@ CC=gcc
 CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
 #CFLAGS+=-D__DEBUG__
 
-all: udploggerd udploggerc
+all: udploggerd udploggerc udploggergrep
 
 clean:
 	rm -f *.o
@@ -14,8 +14,9 @@ pristine: realclean
 proper: realclean
 
 realclean: clean
-	rm -f udploggerd
 	rm -f udploggerc
+	rm -f udploggerd
+	rm -f udploggergrep
 	rm -f udplogger-r*.tar.gz
 
 rebuild: realclean all
@@ -30,8 +31,11 @@ source-package:
 	tar cfz "udplogger-r${REVISION}.tar.gz" "udplogger-r${REVISION}"
 	rm -rf "udplogger-r${REVISION}"
 
+udploggerc: udploggerclientlib.o udploggerc.o socket.o
+	${CC}   ${^} ${LDLIBS} -o ${@}
+
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
 
-udploggerc: udploggerclientlib.o udploggerc.o socket.o
-	${CC}   ${^} ${LDLIBS} -o ${@}
+udploggergrep: udploggerparselib.o udploggergrep.o
+	${CC}   ${^} ${LDLIBS} -l pcre -o ${@}
