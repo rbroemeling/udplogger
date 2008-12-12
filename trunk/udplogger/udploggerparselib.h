@@ -1,6 +1,10 @@
 #ifndef __UDPLOGGERPARSELIB_H__
 #define __UDPLOGGERPARSELIB_H__
 
+
+#include "udplogger.h"
+
+
 enum connection_status_enum
 {
 	connection_status_unknown,
@@ -78,6 +82,7 @@ struct log_entry_t
 	char user_agent[INPUT_BUFFER_SIZE];              /* %{User-agent} - user agent string */
 };
 
+
 /**
  * map_connection_status(<status string>)
  *
@@ -117,5 +122,6 @@ enum usertype_enum map_nexopia_usertype(const char *);
  * passed in.  Returns 1 on success or 0 on failure (i.e. invalid log line format).
  **/
 extern void parse_log_line(char *, struct log_entry_t *);
+
 
 #endif
