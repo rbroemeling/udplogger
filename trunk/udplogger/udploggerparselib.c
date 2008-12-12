@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "udplogger.h"
-#include "udploggerclientlib.h"
+#include "udploggerparselib.h"
 
 
 /*
