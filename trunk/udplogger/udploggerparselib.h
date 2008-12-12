@@ -1,5 +1,5 @@
-#ifndef __UDPLOGGERCLIENTPARSELIB_H__
-#define __UDPLOGGERCLIENTPARSELIB_H__
+#ifndef __UDPLOGGERPARSELIB_H__
+#define __UDPLOGGERPARSELIB_H__
 
 enum connection_status_enum
 {
@@ -117,4 +117,5 @@ enum usertype_enum map_nexopia_usertype(const char *);
  * passed in.  Returns 1 on success or 0 on failure (i.e. invalid log line format).
  **/
 extern void parse_log_line(char *, struct log_entry_t *);
+
 #endif
