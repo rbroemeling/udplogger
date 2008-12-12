@@ -160,15 +160,7 @@ void inline log_packet_hook(struct sockaddr_in *sender, char *line)
 	static struct tm current_time;
 	static char current_time_str[TIME_STRING_BUFFER_SIZE];
 	int i;
-	static struct log_entry_t log_data;
 	static char new_log_destination_path[TIME_STRING_BUFFER_SIZE];
-
-	/*
-	 * Parse the log line into the structure log_data.  This is only used if filters are in-place, but we do it all the time
-         * for the sake of simplicity.  If we run into speed issues this can be optimized out to run only when required.
-	 */
-	bzero(&log_data, sizeof(log_data));
-	parse_log_line(line, &log_data);
 
 	/* Update our timestamp string (if necessary). */
 	if ((! current_timestamp) || (current_timestamp != time(NULL)))

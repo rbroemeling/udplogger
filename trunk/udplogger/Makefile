@@ -33,5 +33,5 @@ source-package:
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
 
-udploggerc: udploggerclientlib.o udploggerclientparselib.o udploggerc.o socket.o
+udploggerc: udploggerclientlib.o udploggerc.o socket.o
 	${CC}   ${^} ${LDLIBS} -o ${@}
