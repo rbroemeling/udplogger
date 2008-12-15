@@ -73,12 +73,12 @@ struct log_entry_t
 	char referer[INPUT_BUFFER_SIZE];                 /* %{Referer} - referer string */
 	struct in_addr remote_address;                   /* %a - remote address */
 	char request_url[INPUT_BUFFER_SIZE];             /* %U - request URL */
-	uint32_t sender_address;                         /* log source address */
-	uint16_t sender_port;                            /* log source port */
-	unsigned long serial;                            /* log serial number */
+	unsigned long serial;                            /* log entry serial number */
+	uint32_t source_address;                         /* log entry source address */
+	uint16_t source_port;                            /* log entry source port */
 	uint16_t status;                                 /* %s - status code */
 	char tag[TAG_MAXIMUM_LENGTH+1];                  /* log tag */
-	time_t timestamp;                                /* parse timestamp */
+	time_t timestamp;                                /* timestamp of log entry */
 	uint16_t time_used;                              /* %T - time used (seconds) */
 	char user_agent[INPUT_BUFFER_SIZE];              /* %{User-agent} - user agent string */
 };

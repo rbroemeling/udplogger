@@ -46,9 +46,11 @@ void parse_referer(const char *, struct log_entry_t *);
 void parse_remote_address(const char *, struct log_entry_t *);
 void parse_request_url(const char *, struct log_entry_t *);
 void parse_serial(const char *, struct log_entry_t *);
+void parse_source(const char *, struct log_entry_t *);
 void parse_status(const char *, struct log_entry_t *);
 void parse_tag(const char *, struct log_entry_t *);
 void parse_time_used(const char *, struct log_entry_t *);
+void parse_timestamp(const char*, struct log_entry_t *);
 void parse_user_agent(const char *, struct log_entry_t *);
 
 
@@ -63,6 +65,8 @@ void parse_log_line(char *line, struct log_entry_t *data)
 	int length;
 	int i;
 	void (*parse_functions[])(const char *, struct log_entry_t *) = {
+		&parse_timestamp,
+		&parse_source,
 		&parse_serial,
 		&parse_tag,
 		&parse_method,
