@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "udplogger.h"
 #include "udploggerparselib.h"
 
@@ -21,6 +22,14 @@
  *
  * See 'udploggerc.c' for a simple example.
  */
+
+
+/*
+ * Give a strptime prototype to stop compiler warnings.  glibc libraries give it to us,
+ * but we need to define _XOPEN_SOURCE to get the prototype which causes other
+ * problems/warnings, so we just prototype it here.
+ */
+char *strptime(const char *, const char *, struct tm *);
 
 
 /*
@@ -96,7 +105,7 @@ void parse_log_line(char *line, struct log_entry_t *data)
 	length = strnlen(tmp, PACKET_MAXIMUM_SIZE);
 	for (i = 0; i < length; i++)
 	{
-		if (tmp[i] == DELIMITER_CHARACTER)
+		if ((tmp[i] == DELIMITER_CHARACTER) || (tmp[i] == '\n'))
 		{
 			tmp[i] = '\0';
 		}
@@ -399,6 +408,33 @@ void parse_serial(const char *field, struct log_entry_t *data)
 }
 
 
+void parse_source(const char *field, struct log_entry_t *data)
+{
+	/* 16 is the maximum length (in characters) of an IPv4 address (255.255.255.255 is
+	 * 15 characters) plus a terminating null byte ('\0'). */
+	char address[16];
+
+	switch (sscanf(field, "[%15[0-9.]:%hu]", address, &(data->source_port)))
+	{
+		case 1:
+			data->source_port = 0;
+		case 2:
+			if (! inet_aton(address, &(data->source_address)))
+			{
+				bzero(&(data->source_address), sizeof(data->source_address));
+			}
+			break;
+		default:
+			bzero(&(data->source_address), sizeof(data->source_address));
+			data->source_port = 0;
+			break;
+	}
+#ifdef __DEBUG__
+	printf("udploggerclientlib.c debug:    parse_source('%s') => [%s:%hu]\n", field, inet_ntoa(data->source_address), data->source_port);
+#endif
+}
+
+
 void parse_status(const char *field, struct log_entry_t *data)
 {
 	if (! sscanf(field, "%hu", &(data->status)))
@@ -428,6 +464,30 @@ void parse_time_used(const char *field, struct log_entry_t *data)
 	}
 #ifdef __DEBUG__
 	printf("udploggerclientlib.c debug:    parse_time_used('%s') => %hu\n", field, data->time_used);
+#endif
+}
+
+
+void parse_timestamp(const char *field, struct log_entry_t *data)
+{
+#ifdef __DEBUG__
+	/* 32 characters is a comfortable buffer to store a normal date string
+	 * ([YYYY-mm-dd HH:MM:SS], 21 characters in length). */
+	#define TIMESTAMP_BUFFER_SIZE 32U
+	char debug_timestamp_str[TIMESTAMP_BUFFER_SIZE];
+#endif
+	char *ptr;
+
+	bzero(&(data->timestamp), sizeof(data->timestamp));
+	ptr = strptime(field, "[%Y-%m-%d %H:%M:%S]", &(data->timestamp));
+	if (ptr == NULL || *ptr != '\0')
+	{
+		bzero(&(data->timestamp), sizeof(data->timestamp));
+	}
+#ifdef __DEBUG__
+	strftime(debug_timestamp_str, TIMESTAMP_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &(data->timestamp));
+	debug_timestamp_str[TIMESTAMP_BUFFER_SIZE - 1] = '\0';
+	printf("udploggerclientlib.c debug:    parse_timestamp('%s') => %s\n", field, debug_timestamp_str);
 #endif
 }
 

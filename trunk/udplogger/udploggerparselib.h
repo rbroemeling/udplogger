@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <inttypes.h>
+#include <time.h>
 #include "udplogger.h"
 
 
@@ -74,11 +75,11 @@ struct log_entry_t
 	struct in_addr remote_address;                   /* %a - remote address */
 	char request_url[INPUT_BUFFER_SIZE];             /* %U - request URL */
 	unsigned long serial;                            /* log entry serial number */
-	uint32_t source_address;                         /* log entry source address */
+	struct in_addr source_address;                   /* log entry source address */
 	uint16_t source_port;                            /* log entry source port */
 	uint16_t status;                                 /* %s - status code */
 	char tag[TAG_MAXIMUM_LENGTH+1];                  /* log tag */
-	time_t timestamp;                                /* timestamp of log entry */
+	struct tm timestamp;                             /* timestamp of log entry */
 	uint16_t time_used;                              /* %T - time used (seconds) */
 	char user_agent[INPUT_BUFFER_SIZE];              /* %{User-agent} - user agent string */
 };
