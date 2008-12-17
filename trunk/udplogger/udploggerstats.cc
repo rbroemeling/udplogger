@@ -178,7 +178,7 @@ void sql_query(const char *sql_fmt, ...)
 	va_list ap;
 	int result = 0;
 	char *sql = NULL;
-	int sql_size = 200;
+	int sql_size = 200; /* Guess that we will not need more than 200 bytes to properly render sql_fmt. */
 	char *sqlite_errmsg = NULL;
 
 	if (udploggerstats_conf.data_store == NULL)
@@ -188,7 +188,6 @@ void sql_query(const char *sql_fmt, ...)
 
 	while (1)
 	{
-		/* Guess that we will not need more than 200 bytes to properly render sql_fmt. */
 		if ((sql = (char *)calloc(sql_size, sizeof(char))) == NULL)
 		{
 			fprintf(stderr, "udploggerstats.cc could not allocate %d bytes for sql query string\n", sql_size);
