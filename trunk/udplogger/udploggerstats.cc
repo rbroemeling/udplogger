@@ -23,6 +23,7 @@ struct udploggerstats_configuration_t {
 
 int arguments_parse(int, char **);
 void hit_statistics(struct log_entry_t *, time_t);
+void sql_query(const char *, ...);
 void status_statistics(struct log_entry_t *, time_t);
 void usersex_statistics(struct log_entry_t *, time_t);
 void usertype_statistics(struct log_entry_t *, time_t);
@@ -143,8 +144,6 @@ void hit_statistics(struct log_entry_t *data, time_t timestamp)
 	typedef std::map<char *, long unsigned int> hit_map_t;
 	typedef std::map<time_t, hit_map_t> timestamp_hit_map_t;
 	static timestamp_hit_map_t hit_maps;
-	char sql[200];
-	char *sqlite_errmsg = NULL;
 
 	if (data != NULL)
 	{
@@ -154,48 +153,15 @@ void hit_statistics(struct log_entry_t *data, time_t timestamp)
 		return;
 	}
 
-	if (udploggerstats_conf.data_store != NULL)
-	{
-		if (sqlite3_exec(udploggerstats_conf.data_store, "CREATE TABLE IF NOT EXISTS hit_statistics ( timestamp INTEGER, hits INTEGER, bytes_incoming INTEGER, bytes_outgoing INTEGER, PRIMARY KEY (timestamp) );", NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-		{
-			fprintf(stderr, "udploggerstats.cc could not ensure existence of table hit_statistics: %s\n", sqlite_errmsg);
-		}
-		if (sqlite_errmsg != NULL)
-		{
-			sqlite3_free(sqlite_errmsg);
-			sqlite_errmsg = NULL;
-		}
-	}
+	sql_query("CREATE TABLE IF NOT EXISTS hit_statistics ( timestamp INTEGER, hits INTEGER, bytes_incoming INTEGER, bytes_outgoing INTEGER, PRIMARY KEY (timestamp) );");
 
 	for (timestamp_hit_map_t::const_iterator i = hit_maps.begin(); i != hit_maps.end(); i++)
 	{
 		timestamp = i->first;
 		hit_map_t hit_map = i->second;
 
-		if (udploggerstats_conf.data_store != NULL)
-		{
-			snprintf(sql, 200, "INSERT OR IGNORE INTO hit_statistics ( timestamp, hits, bytes_incoming, bytes_outgoing ) VALUES ( %ld, 0, 0, 0 );", timestamp);
-			if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-			{
-				fprintf(stderr, "udploggerstats.cc could not execute insertion into hit_statistics: %s\n", sqlite_errmsg);
-			}
-			if (sqlite_errmsg != NULL)
-			{
-				sqlite3_free(sqlite_errmsg);
-				sqlite_errmsg = NULL;
-			}
-
-			snprintf(sql, 200, "UPDATE hit_statistics SET hits = hits + %lu, bytes_incoming = bytes_incoming + %lu, bytes_outgoing = bytes_outgoing + %lu WHERE timestamp = %ld;", hit_map["hits"], hit_map["bytes_incoming"], hit_map["bytes_outgoing"], timestamp);
-			if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-			{
-				fprintf(stderr, "udploggerstats.cc could not execute update of hit_statistics: %s\n", sqlite_errmsg);
-			}
-			if (sqlite_errmsg != NULL)
-			{
-				sqlite3_free(sqlite_errmsg);
-				sqlite_errmsg = NULL;
-			}
-		}
+		sql_query("INSERT OR IGNORE INTO hit_statistics ( timestamp, hits, bytes_incoming, bytes_outgoing ) VALUES ( %ld, 0, 0, 0 );", timestamp);
+		sql_query("UPDATE hit_statistics SET hits = hits + %lu, bytes_incoming = bytes_incoming + %lu, bytes_outgoing = bytes_outgoing + %lu WHERE timestamp = %ld;", hit_map["hits"], hit_map["bytes_incoming"], hit_map["bytes_outgoing"], timestamp);
 
 		#ifdef __DEBUG__
 			for (hit_map_t::const_iterator j = hit_map.begin(); j != hit_map.end(); j++)
@@ -207,13 +173,72 @@ void hit_statistics(struct log_entry_t *data, time_t timestamp)
 }
 
 
+void sql_query(const char *sql_fmt, ...)
+{
+	va_list ap;
+	int result = 0;
+	char *sql = NULL;
+	int sql_size = 200;
+	char *sqlite_errmsg = NULL;
+
+	if (udploggerstats_conf.data_store == NULL)
+	{
+		return;
+	}
+
+	while (1)
+	{
+		/* Guess that we will not need more than 200 bytes to properly render sql_fmt. */
+		if ((sql = (char *)calloc(sql_size, sizeof(char))) == NULL)
+		{
+			fprintf(stderr, "udploggerstats.cc could not allocate %d bytes for sql query string\n", sql_size);
+			return;
+		}
+
+		/* Attempt to render sql_fmt in the memory pointed to by sql. */
+		va_start(ap, sql_fmt);
+		result = vsnprintf(sql, sql_size, sql_fmt, ap);
+		va_end(ap);
+
+		if ((result > -1) && (result < sql_size))
+		{
+			/* We rendered the string successfully. */
+			break;
+		}
+
+		/* We failed to render the string, try again with more space. */
+		if (result > -1)
+		{
+			sql_size = result + 1; /* glibc 2.1 - use exactly as much memory as we need. */
+		}
+		else
+		{
+			sql_size *= 2; /* glibc 2.0 - double the amount of memory that we attempt to use. */
+		}
+		free(sql);
+		sql = NULL;
+	}
+
+	result = sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg);
+	if (result != SQLITE_OK)
+	{
+		fprintf(stderr, "udploggerstats.cc SQL query: %s\n", sql);
+		fprintf(stderr, "udploggerstats.cc SQL error: %s\n", sqlite_errmsg);
+	}
+	if (sqlite_errmsg != NULL)
+	{
+		sqlite3_free(sqlite_errmsg);
+		sqlite_errmsg = NULL;
+	}
+	free(sql);
+}
+
+
 void status_statistics(struct log_entry_t *data, time_t timestamp)
 {
 	typedef std::map<short unsigned int, long unsigned int> status_map_t;
 	typedef std::map<time_t, status_map_t> timestamp_status_map_t;
 	static timestamp_status_map_t status_maps;
-	char sql[200];
-	char *sqlite_errmsg = NULL;
 
 	if (data != NULL)
 	{
@@ -221,18 +246,7 @@ void status_statistics(struct log_entry_t *data, time_t timestamp)
 		return;
 	}
 
-	if (udploggerstats_conf.data_store != NULL)
-	{
-		if (sqlite3_exec(udploggerstats_conf.data_store, "CREATE TABLE IF NOT EXISTS status_statistics ( timestamp INTEGER, status INTEGER, count INTEGER, PRIMARY KEY (timestamp, status) );", NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-		{
-			fprintf(stderr, "udploggerstats.cc could not ensure existence of table status_statistics: %s\n", sqlite_errmsg);
-		}
-		if (sqlite_errmsg != NULL)
-		{
-			sqlite3_free(sqlite_errmsg);
-			sqlite_errmsg = NULL;
-		}
-	}
+	sql_query("CREATE TABLE IF NOT EXISTS status_statistics ( timestamp INTEGER, status INTEGER, count INTEGER, PRIMARY KEY (timestamp, status) );");
 
 	for (timestamp_status_map_t::const_iterator i = status_maps.begin(); i != status_maps.end(); i++)
 	{
@@ -244,30 +258,8 @@ void status_statistics(struct log_entry_t *data, time_t timestamp)
 			short unsigned int status = j->first;
 			long unsigned int count = j->second;
 
-			if (udploggerstats_conf.data_store != NULL)
-			{
-				snprintf(sql, 200, "INSERT OR IGNORE INTO status_statistics ( timestamp, status, count ) VALUES ( %ld, %hu, 0 );", timestamp, status);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute insertion into status_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-
-				snprintf(sql, 200, "UPDATE status_statistics SET count = count + %lu WHERE timestamp = %ld AND status = %hu;", count, timestamp, status);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute update of status_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-			}
+			sql_query("INSERT OR IGNORE INTO status_statistics ( timestamp, status, count ) VALUES ( %ld, %hu, 0 );", timestamp, status);
+			sql_query("UPDATE status_statistics SET count = count + %lu WHERE timestamp = %ld AND status = %hu;", count, timestamp, status);
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: status_maps[%ld].%hu => %lu\n", timestamp, status, count);
@@ -282,8 +274,6 @@ void usersex_statistics(struct log_entry_t *data, time_t timestamp)
 	typedef std::map<char *, long unsigned int> usersex_map_t;
 	typedef std::map<time_t, usersex_map_t> timestamp_usersex_map_t;
 	static timestamp_usersex_map_t usersex_maps;
-	char sql[200];
-	char *sqlite_errmsg = NULL;
 
 	if (data != NULL)
 	{
@@ -302,18 +292,7 @@ void usersex_statistics(struct log_entry_t *data, time_t timestamp)
 		return;
 	}
 
-	if (udploggerstats_conf.data_store != NULL)
-	{
-		if (sqlite3_exec(udploggerstats_conf.data_store, "CREATE TABLE IF NOT EXISTS usersex_statistics ( timestamp INTEGER, sex TEXT, count INTEGER, PRIMARY KEY (timestamp, sex) );", NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-		{
-			fprintf(stderr, "udploggerstats.cc could not ensure existence of table usersex_statistics: %s\n", sqlite_errmsg);
-		}
-		if (sqlite_errmsg != NULL)
-		{
-			sqlite3_free(sqlite_errmsg);
-			sqlite_errmsg = NULL;
-		}
-	}
+	sql_query("CREATE TABLE IF NOT EXISTS usersex_statistics ( timestamp INTEGER, sex TEXT, count INTEGER, PRIMARY KEY (timestamp, sex) );");
 
 	for (timestamp_usersex_map_t::const_iterator i = usersex_maps.begin(); i != usersex_maps.end(); i++)
 	{
@@ -325,30 +304,8 @@ void usersex_statistics(struct log_entry_t *data, time_t timestamp)
 			char *sex = j->first;
 			long unsigned int count = j->second;
 
-			if (udploggerstats_conf.data_store != NULL)
-			{
-				snprintf(sql, 200, "INSERT OR IGNORE INTO usersex_statistics ( timestamp, sex, count ) VALUES ( %ld, '%s', 0 );", timestamp, sex);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute insertion into usersex_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-
-				snprintf(sql, 200, "UPDATE usersex_statistics SET count = count + %lu WHERE timestamp = %ld AND sex = '%s';", count, timestamp, sex);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute update of usersex_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-			}
+			sql_query("INSERT OR IGNORE INTO usersex_statistics ( timestamp, sex, count ) VALUES ( %ld, '%s', 0 );", timestamp, sex);
+			sql_query("UPDATE usersex_statistics SET count = count + %lu WHERE timestamp = %ld AND sex = '%s';", count, timestamp, sex);
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: usersex_maps[%ld].%s => %lu\n", timestamp, sex, count);
@@ -363,8 +320,6 @@ void usertype_statistics(struct log_entry_t *data, time_t timestamp)
 	typedef std::map<char *, long unsigned int> usertype_map_t;
 	typedef std::map<time_t, usertype_map_t> timestamp_usertype_map_t;
 	static timestamp_usertype_map_t usertype_maps;
-	char sql[200];
-	char *sqlite_errmsg = NULL;
 
 	if (data != NULL)
 	{
@@ -386,18 +341,7 @@ void usertype_statistics(struct log_entry_t *data, time_t timestamp)
 		return;
 	}
 
-	if (udploggerstats_conf.data_store != NULL)
-	{
-		if (sqlite3_exec(udploggerstats_conf.data_store, "CREATE TABLE IF NOT EXISTS usertype_statistics ( timestamp INTEGER, type TEXT, count INTEGER, PRIMARY KEY (timestamp, type) );", NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-		{
-			fprintf(stderr, "udploggerstats.cc could not ensure existence of table usertype_statistics: %s\n", sqlite_errmsg);
-		}
-		if (sqlite_errmsg != NULL)
-		{
-			sqlite3_free(sqlite_errmsg);
-			sqlite_errmsg = NULL;
-		}
-	}
+	sql_query("CREATE TABLE IF NOT EXISTS usertype_statistics ( timestamp INTEGER, type TEXT, count INTEGER, PRIMARY KEY (timestamp, type) );");
 
 	for (timestamp_usertype_map_t::const_iterator i = usertype_maps.begin(); i != usertype_maps.end(); i++)
 	{
@@ -409,30 +353,8 @@ void usertype_statistics(struct log_entry_t *data, time_t timestamp)
 			char *type = j->first;
 			long unsigned int count = j->second;
 
-			if (udploggerstats_conf.data_store != NULL)
-			{
-				snprintf(sql, 200, "INSERT OR IGNORE INTO usertype_statistics ( timestamp, type, count ) VALUES ( %ld, '%s', 0 );", timestamp, type);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute insertion into usertype_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-
-				snprintf(sql, 200, "UPDATE usertype_statistics SET count = count + %lu WHERE timestamp = %ld AND type = '%s';", count, timestamp, type);
-				if (sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg) != SQLITE_OK)
-				{
-					fprintf(stderr, "udploggerstats.cc could not execute update of usertype_statistics: %s\n", sqlite_errmsg);
-				}
-				if (sqlite_errmsg != NULL)
-				{
-					sqlite3_free(sqlite_errmsg);
-					sqlite_errmsg = NULL;
-				}
-			}
+			sql_query("INSERT OR IGNORE INTO usertype_statistics ( timestamp, type, count ) VALUES ( %ld, '%s', 0 );", timestamp, type);
+			sql_query("UPDATE usertype_statistics SET count = count + %lu WHERE timestamp = %ld AND type = '%s';", count, timestamp, type);
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: usertype_maps[%ld].%s => %lu\n", timestamp, type, count);
