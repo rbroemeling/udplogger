@@ -131,13 +131,13 @@ int arguments_parse(int argc, char **argv)
 				udploggergrep_conf.query_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
 				if (udploggergrep_conf.query_filter == NULL)
 				{
-					fprintf(stderr, "udploggergrep.c invalid query regexp at offset %d: %s\n", pcre_error_offset, pcre_error);
+					fprintf(stderr, "udploggergrep.cc invalid query regexp at offset %d: %s\n", pcre_error_offset, pcre_error);
 					return -1;
 				}
 				else
 				{
 					#ifdef __DEBUG__
-						printf("udploggergrep.c debug: setting query regexp to '%s'\n", optarg);
+						printf("udploggergrep.cc debug: setting query regexp to '%s'\n", optarg);
 					#endif
 				}
 				break;
@@ -145,14 +145,14 @@ int arguments_parse(int argc, char **argv)
 				uint_tmp = strtoumax(optarg, 0, 10);
 				if (! uint_tmp || uint_tmp == UINT_MAX || uint_tmp > 65535)
 				{
-					fprintf(stderr, "udploggergrep.c invalid status filter '%s'\n", optarg);
+					fprintf(stderr, "udploggergrep.cc invalid status filter '%s'\n", optarg);
 					return -1;
 				}
 				else
 				{
 					udploggergrep_conf.status_filter = uint_tmp;
 					#ifdef __DEBUG__
-						printf("udploggergrep.c debug: setting status_filter to '%hu'\n", udploggergrep_conf.status_filter);
+						printf("udploggergrep.cc debug: setting status_filter to '%hu'\n", udploggergrep_conf.status_filter);
 					#endif
 				}
 				break;
@@ -160,18 +160,18 @@ int arguments_parse(int argc, char **argv)
 				udploggergrep_conf.url_filter = pcre_compile(optarg, 0, &pcre_error, &pcre_error_offset, NULL);
 				if (udploggergrep_conf.url_filter == NULL)
 				{
-					fprintf(stderr, "udploggergrep.c invalid url regexp at offset %d: %s\n", pcre_error_offset, pcre_error);
+					fprintf(stderr, "udploggergrep.cc invalid url regexp at offset %d: %s\n", pcre_error_offset, pcre_error);
 					return -1;
 				}
 				else
 				{
 					#ifdef __DEBUG__
-						printf("udploggergrep.c debug: setting url regexp to '%s'\n", optarg);
+						printf("udploggergrep.cc debug: setting url regexp to '%s'\n", optarg);
 					#endif
 				}
 				break;
 			case 'v':
-				printf("udploggergrep.c revision r%d\n", REVISION);
+				printf("udploggergrep.cc revision r%d\n", REVISION);
 				return 0;
 		}
 	}
