@@ -25,7 +25,7 @@ rebuild: realclean all
 
 source-package:
 	mkdir "udplogger-r${REVISION}"
-	cp *.c *.h Makefile "udplogger-r${REVISION}"
+	cp *.cc *.c *.h Makefile "udplogger-r${REVISION}"
 	cat "udplogger-r${REVISION}/Makefile" | grep -v '^REVISION=' > "udplogger-r${REVISION}/Makefile.norev"
 	echo "REVISION=${REVISION}" > "udplogger-r${REVISION}/Makefile"
 	cat "udplogger-r${REVISION}/Makefile.norev" >> "udplogger-r${REVISION}/Makefile"
