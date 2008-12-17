@@ -43,4 +43,4 @@ udploggergrep: udploggerparselib.o udploggergrep.o
 	${CC}   ${^} ${LDLIBS} -l pcre -l stdc++ -o ${@}
 
 udploggerstats: udploggerparselib.o udploggerstats.o
-	${CC}   ${^} ${LDLIBS} -l stdc++ -o ${@}
+	${CC}   ${^} ${LDLIBS} -l sqlite3 -l stdc++ -o ${@}
