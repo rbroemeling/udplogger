@@ -218,6 +218,10 @@ void sql_query(const char *sql_fmt, ...)
 		sql = NULL;
 	}
 
+	#ifdef __DEBUG__
+		printf("udploggerstats.cc debug: SQL format '%s' was successfully rendered to '%s'.\n", sql_fmt, sql);
+	#endif
+
 	result = sqlite3_exec(udploggerstats_conf.data_store, sql, NULL, NULL, &sqlite_errmsg);
 	if (result != SQLITE_OK)
 	{
