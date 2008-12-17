@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <map>
 #include "udplogger.h"
 #include "udploggerparselib.h"
 
@@ -47,23 +48,17 @@ int main (int argc, char **argv)
 
 void status_statistics(struct log_entry_t *data)
 {
-	unsigned int i;
-	static short unsigned int initialization_flag = 1;
-	static long unsigned int status_count[USHRT_MAX + 1];
+	typedef std::map<short unsigned int, long unsigned int> map_t;
+	static map_t status_maps[24]; /* 24 maps, one for each hour of the day (0..23). */
 
-	if (initialization_flag)
-	{
-		bzero(&status_count, (USHRT_MAX + 1) * sizeof(long unsigned int));
-		initialization_flag = 0;
-	}
 	if (data == NULL)
 	{
 		#ifdef __DEBUG__
-			for (i = 0; i < (USHRT_MAX + 1); i++)
+			for (unsigned short i = 0; i < 24; i++)
 			{
-				if (status_count[i] > 0)
+				for (map_t::const_iterator j = status_maps[i].begin(); j != status_maps[i].end(); j++)
 				{
-					printf("udploggerstats.c debug: status_statistics.%u => %lu\n", i, status_count[i]);
+					printf("udploggerstats.c debug: status_maps[%hu].%u => %lu\n", i, j->first, j->second);
 				}
 			}
 		#endif
@@ -71,36 +66,39 @@ void status_statistics(struct log_entry_t *data)
 	}
 	else
 	{
-		status_count[data->status]++;
+		status_maps[data->timestamp.tm_hour][data->status]++;
 	}
 }
 
 
 void usersex_statistics(struct log_entry_t *data)
 {
-	static long unsigned int unknown = 0;
-	static long unsigned int female = 0;
-	static long unsigned int male = 0;
+	typedef std::map<char *, long unsigned int> map_t;
+	static map_t usersex_maps[24]; /* 24 maps, one for each hour of the day (0..23). */
 
 	if (data == NULL)
 	{
 		#ifdef __DEBUG__
-			printf("udploggerstats.c debug: usersex_statistics.male => %lu\n", male);
-			printf("udploggerstats.c debug: usersex_statistics.female => %lu\n", female);
-			printf("udploggerstats.c debug: usersex_statistics.unknown => %lu\n", unknown);
+			for (unsigned short i = 0; i < 24; i++)
+			{
+				for (map_t::const_iterator j = usersex_maps[i].begin(); j != usersex_maps[i].end(); j++)
+				{
+					printf("udploggerstats.c debug: usersex_maps[%hu].%s => %lu\n", i, j->first, j->second);
+				}
+			}
 		#endif
 		return;
 	}
 	switch (data->nexopia_usersex)
 	{
 		case sex_male:
-			male++;
+			usersex_maps[data->timestamp.tm_hour]["male"]++;
 			break;
 		case sex_female:
-			female++;
+			usersex_maps[data->timestamp.tm_hour]["female"]++;
 			break;
 		default:
-			unknown++;
+			usersex_maps[data->timestamp.tm_hour]["unknown"]++;
 			break;
 	}
 }
@@ -108,34 +106,35 @@ void usersex_statistics(struct log_entry_t *data)
 
 void usertype_statistics(struct log_entry_t *data)
 {
-	static long unsigned int unknown = 0;
-	static long unsigned int plus = 0;
-	static long unsigned int user = 0;
-	static long unsigned int anon = 0;
+	typedef std::map<char *, long unsigned int> map_t;
+	static map_t usertype_maps[24]; /* 24 maps, one for each hour of the day (0..23). */
 
 	if (data == NULL)
 	{
 		#ifdef __DEBUG__
-			printf("udploggerstats.c debug: usertype_statistics.plus => %lu\n", plus);
-			printf("udploggerstats.c debug: usertype_statistics.user => %lu\n", user);
-			printf("udploggerstats.c debug: usertype_statistics.anon => %lu\n", anon);
-			printf("udploggerstats.c debug: usertype_statistics.unknown => %lu\n", unknown);
+			for (unsigned short i = 0; i < 24; i++)
+			{
+				for (map_t::const_iterator j = usertype_maps[i].begin(); j != usertype_maps[i].end(); j++)
+				{
+					printf("udploggerstats.c debug: usertype_maps[%hu].%s => %lu\n", i, j->first, j->second);
+				}
+			}
 		#endif
 		return;
 	}
 	switch (data->nexopia_usertype)
 	{
 		case usertype_plus:
-			plus++;
+			usertype_maps[data->timestamp.tm_hour]["plus"]++;
 			break;
 		case usertype_user:
-			user++;
+			usertype_maps[data->timestamp.tm_hour]["user"]++;
 			break;
 		case usertype_anon:
-			anon++;
+			usertype_maps[data->timestamp.tm_hour]["anon"]++;
 			break;
 		default:
-			unknown++;
+			usertype_maps[data->timestamp.tm_hour]["unknown"]++;
 			break;
 	}
 }
