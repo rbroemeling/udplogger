@@ -204,7 +204,7 @@ void parse_body_size(const char *field, struct log_entry_t *data)
 		data->body_size = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_body_size('%s') => %u\n", field, data->body_size);
+	printf("udploggerparselib.cc debug:    parse_body_size('%s') => %u\n", field, data->body_size);
 #endif
 }
 
@@ -216,7 +216,7 @@ void parse_bytes_incoming(const char *field, struct log_entry_t *data)
 		data->bytes_incoming = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_bytes_incoming('%s') => %u\n", field, data->bytes_incoming);
+	printf("udploggerparselib.cc debug:    parse_bytes_incoming('%s') => %u\n", field, data->bytes_incoming);
 #endif
 }
 
@@ -228,7 +228,7 @@ void parse_bytes_outgoing(const char *field, struct log_entry_t *data)
 		data->bytes_outgoing = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_bytes_outgoing('%s') => %u\n", field, data->bytes_outgoing);
+	printf("udploggerparselib.cc debug:    parse_bytes_outgoing('%s') => %u\n", field, data->bytes_outgoing);
 #endif
 }
 
@@ -237,7 +237,7 @@ void parse_connection_status(const char *field, struct log_entry_t *data)
 {
 	data->connection_status = map_connection_status(field);
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_connection_status('%s') => %u\n", field, data->connection_status);
+	printf("udploggerparselib.cc debug:    parse_connection_status('%s') => %u\n", field, data->connection_status);
 #endif
 }
 
@@ -253,7 +253,7 @@ void parse_forwarded_for(const char *field, struct log_entry_t *data)
 		memcpy(&(data->forwarded_for), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_forwarded_for('%s') => '%s'\n", field, data->forwarded_for);
+	printf("udploggerparselib.cc debug:    parse_forwarded_for('%s') => '%s'\n", field, data->forwarded_for);
 #endif
 }
 
@@ -262,7 +262,7 @@ void parse_method(const char *field, struct log_entry_t *data)
 {
 	data->method = map_method(field);
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_method('%s') => %u\n", field, data->method);
+	printf("udploggerparselib.cc debug:    parse_method('%s') => %u\n", field, data->method);
 #endif
 }
 
@@ -274,7 +274,7 @@ void parse_nexopia_userage(const char *field, struct log_entry_t *data)
 		data->nexopia_userage = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_userage('%s') => %hu\n", field, data->nexopia_userage);
+	printf("udploggerparselib.cc debug:    parse_nexopia_userage('%s') => %hu\n", field, data->nexopia_userage);
 #endif
 }
 
@@ -286,7 +286,7 @@ void parse_nexopia_userid(const char *field, struct log_entry_t *data)
 		data->nexopia_userid = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_userid('%s') => %lu\n", field, data->nexopia_userid);
+	printf("udploggerparselib.cc debug:    parse_nexopia_userid('%s') => %lu\n", field, data->nexopia_userid);
 #endif
 }
 
@@ -298,7 +298,7 @@ void parse_nexopia_userlocation(const char *field, struct log_entry_t *data)
 		data->nexopia_userlocation = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_userlocation('%s') => %lu\n", field, data->nexopia_userlocation);
+	printf("udploggerparselib.cc debug:    parse_nexopia_userlocation('%s') => %lu\n", field, data->nexopia_userlocation);
 #endif
 }
 
@@ -307,7 +307,7 @@ void parse_nexopia_usersex(const char *field, struct log_entry_t *data)
 {
 	data->nexopia_usersex = map_nexopia_usersex(field);
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_usersex('%s') => %u\n", field, data->nexopia_usersex);
+	printf("udploggerparselib.cc debug:    parse_nexopia_usersex('%s') => %u\n", field, data->nexopia_usersex);
 #endif
 }
 
@@ -316,7 +316,7 @@ void parse_nexopia_usertype(const char *field, struct log_entry_t *data)
 {
 	data->nexopia_usertype = map_nexopia_usertype(field);
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_nexopia_usertype('%s') => %u\n", field, data->nexopia_usertype);
+	printf("udploggerparselib.cc debug:    parse_nexopia_usertype('%s') => %u\n", field, data->nexopia_usertype);
 #endif
 }
 
@@ -332,7 +332,7 @@ void parse_query_string(const char *field, struct log_entry_t *data)
 		memcpy(&(data->query_string), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_query_string('%s') => '%s'\n", field, data->query_string);
+	printf("udploggerparselib.cc debug:    parse_query_string('%s') => '%s'\n", field, data->query_string);
 #endif
 }
 
@@ -348,7 +348,7 @@ void parse_referer(const char *field, struct log_entry_t *data)
 		memcpy(&(data->referer), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_referer('%s') => '%s'\n", field, data->referer);
+	printf("udploggerparselib.cc debug:    parse_referer('%s') => '%s'\n", field, data->referer);
 #endif
 }
 
@@ -360,7 +360,7 @@ void parse_remote_address(const char *field, struct log_entry_t *data)
 		bzero(&(data->remote_address), sizeof(data->remote_address));
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_remote_address('%s') => %s\n", field, inet_ntoa(data->remote_address));
+	printf("udploggerparselib.cc debug:    parse_remote_address('%s') => %s\n", field, inet_ntoa(data->remote_address));
 #endif
 }
 
@@ -376,7 +376,7 @@ void parse_request_url(const char *field, struct log_entry_t *data)
 		memcpy(&(data->request_url), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_request_url('%s') => '%s'\n", field, data->request_url);
+	printf("udploggerparselib.cc debug:    parse_request_url('%s') => '%s'\n", field, data->request_url);
 #endif
 }
 
@@ -388,7 +388,7 @@ void parse_serial(const char *field, struct log_entry_t *data)
 		data->serial = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_serial('%s') => %lu\n", field, data->serial);
+	printf("udploggerparselib.cc debug:    parse_serial('%s') => %lu\n", field, data->serial);
 #endif
 }
 
@@ -415,7 +415,7 @@ void parse_source(const char *field, struct log_entry_t *data)
 			break;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_source('%s') => [%s:%hu]\n", field, inet_ntoa(data->source_address), data->source_port);
+	printf("udploggerparselib.cc debug:    parse_source('%s') => [%s:%hu]\n", field, inet_ntoa(data->source_address), data->source_port);
 #endif
 }
 
@@ -427,7 +427,7 @@ void parse_status(const char *field, struct log_entry_t *data)
 		data->status = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_status('%s') => %hu\n", field, data->status);
+	printf("udploggerparselib.cc debug:    parse_status('%s') => %hu\n", field, data->status);
 #endif
 }
 
@@ -436,7 +436,7 @@ void parse_tag(const char *field, struct log_entry_t *data)
 {
 	memcpy(&(data->tag), field, strlen(field) + 1);
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_tag('%s') => '%s'\n", field, data->tag);
+	printf("udploggerparselib.cc debug:    parse_tag('%s') => '%s'\n", field, data->tag);
 #endif
 }
 
@@ -448,7 +448,7 @@ void parse_time_used(const char *field, struct log_entry_t *data)
 		data->time_used = 0;
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_time_used('%s') => %hu\n", field, data->time_used);
+	printf("udploggerparselib.cc debug:    parse_time_used('%s') => %hu\n", field, data->time_used);
 #endif
 }
 
@@ -472,7 +472,7 @@ void parse_timestamp(const char *field, struct log_entry_t *data)
 #ifdef __DEBUG__
 	strftime(debug_timestamp_str, TIMESTAMP_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &(data->timestamp));
 	debug_timestamp_str[TIMESTAMP_BUFFER_SIZE - 1] = '\0';
-	printf("udploggerclientlib.c debug:    parse_timestamp('%s') => %s\n", field, debug_timestamp_str);
+	printf("udploggerparselib.cc debug:    parse_timestamp('%s') => %s\n", field, debug_timestamp_str);
 #endif
 }
 
@@ -488,6 +488,6 @@ void parse_user_agent(const char *field, struct log_entry_t *data)
 		memcpy(&(data->user_agent), field, strlen(field) + 1);
 	}
 #ifdef __DEBUG__
-	printf("udploggerclientlib.c debug:    parse_user_agent('%s') => '%s'\n", field, data->user_agent);
+	printf("udploggerparselib.cc debug:    parse_user_agent('%s') => '%s'\n", field, data->user_agent);
 #endif
 }
