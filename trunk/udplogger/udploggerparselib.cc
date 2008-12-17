@@ -24,21 +24,6 @@
  */
 
 
-/*
- * Give a strptime prototype to stop compiler warnings.  glibc libraries give it to us,
- * but we need to define _XOPEN_SOURCE to get the prototype which causes other
- * problems/warnings, so we just prototype it here.
- */
-char *strptime(const char *, const char *, struct tm *);
-
-
-/*
- * Give a strnlen prototype to stop compiler warnings.  GNU libraries give it to us,
- * but ISO C90 doesn't allow us to use _GNU_SOURCE before including <string.h>.
- */
-size_t strnlen(const char *, size_t);
-
-
 void parse_body_size(const char *, struct log_entry_t *);
 void parse_bytes_incoming(const char *, struct log_entry_t *);
 void parse_bytes_outgoing(const char *, struct log_entry_t *);

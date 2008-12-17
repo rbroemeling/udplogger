@@ -3,6 +3,7 @@ REVISION=${shell svn info . | grep '^Revision: ' | sed -e 's/[^0-9]//g'}
 CC=gcc
 CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
 #CFLAGS+=-D__DEBUG__
+CPPFLAGS=${CFLAGS}
 
 all: udploggerd udploggerc udploggergrep udploggerstats
 
@@ -39,7 +40,7 @@ udploggerd: beacon.o socket.o trim.o udploggerd.o
 	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
 
 udploggergrep: udploggerparselib.o udploggergrep.o
-	${CC}   ${^} ${LDLIBS} -l pcre -o ${@}
+	${CC}   ${^} ${LDLIBS} -l pcre -l stdc++ -o ${@}
 
 udploggerstats: udploggerparselib.o udploggerstats.o
-	${CC}   ${^} ${LDLIBS} -o ${@}
+	${CC}   ${^} ${LDLIBS} -l stdc++ -o ${@}
