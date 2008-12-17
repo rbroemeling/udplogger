@@ -473,6 +473,15 @@ void parse_timestamp(const char *field, struct log_entry_t *data)
 	strftime(debug_timestamp_str, TIMESTAMP_BUFFER_SIZE, "[%Y-%m-%d %H:%M:%S]", &(data->timestamp));
 	debug_timestamp_str[TIMESTAMP_BUFFER_SIZE - 1] = '\0';
 	printf("udploggerparselib.cc debug:    parse_timestamp('%s') => %s\n", field, debug_timestamp_str);
+	printf("                                 tm_sec: %d\n", data->timestamp.tm_sec);
+	printf("                                 tm_min: %d\n", data->timestamp.tm_min);
+	printf("                                 tm_hour: %d\n", data->timestamp.tm_hour);
+	printf("                                 tm_mday: %d\n", data->timestamp.tm_mday);
+	printf("                                 tm_mon: %d\n", data->timestamp.tm_mon);
+	printf("                                 tm_year: %d\n", data->timestamp.tm_year);
+	printf("                                 tm_wday: %d\n", data->timestamp.tm_wday);
+	printf("                                 tm_yday: %d\n", data->timestamp.tm_yday);
+	printf("                                 tm_isdst: %d\n", data->timestamp.tm_isdst);
 #endif
 }
 
