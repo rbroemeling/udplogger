@@ -186,7 +186,7 @@ void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 			long unsigned int count = j->second;
 
 			sql_query("INSERT OR IGNORE INTO content_type_statistics ( timestamp, content_type, count ) VALUES ( %ld, '%s', 0 );", timestamp, content_type.c_str());
-			sql_query("UPDATE content_type_statistics SET count = count + %lu WHERE timestamp = %ld AND host = '%s';", count, timestamp, content_type.c_str());
+			sql_query("UPDATE content_type_statistics SET count = count + %lu WHERE timestamp = %ld AND content_type = '%s';", count, timestamp, content_type.c_str());
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: content_type_maps[%ld].%s => %lu\n", timestamp, content_type.c_str(), count);
@@ -400,7 +400,7 @@ void time_used_statistics(struct log_entry_t *data, time_t timestamp)
 			long unsigned int count = j->second;
 
 			sql_query("INSERT OR IGNORE INTO time_used_statistics ( timestamp, time_used, count ) VALUES ( %ld, %hd, 0 );", timestamp, time_used);
-			sql_query("UPDATE time_used_statistics SET count = count + %lu WHERE timestamp = %ld AND status = %hd;", count, timestamp, time_used);
+			sql_query("UPDATE time_used_statistics SET count = count + %lu WHERE timestamp = %ld AND time_used = %hd;", count, timestamp, time_used);
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: time_used_maps[%ld].%hd => %lu\n", timestamp, time_used, count);
