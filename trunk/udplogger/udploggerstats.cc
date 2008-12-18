@@ -25,6 +25,7 @@ int arguments_parse(int, char **);
 void hit_statistics(struct log_entry_t *, time_t);
 void sql_query(const char *, ...);
 void status_statistics(struct log_entry_t *, time_t);
+void time_used_statistics(struct log_entry_t *, time_t);
 void usersex_statistics(struct log_entry_t *, time_t);
 void usertype_statistics(struct log_entry_t *, time_t);
 
@@ -60,12 +61,14 @@ int main (int argc, char **argv)
 
 		hit_statistics(&log_data, timestamp);
 		status_statistics(&log_data, timestamp);
+		time_used_statistics(&log_data, timestamp);
 		usersex_statistics(&log_data, timestamp);
 		usertype_statistics(&log_data, timestamp);
 	}
 
 	hit_statistics(NULL, 0);
 	status_statistics(NULL, 0);
+	time_used_statistics(NULL, 0);
 	usersex_statistics(NULL, 0);
 	usertype_statistics(NULL, 0);
 
@@ -266,6 +269,51 @@ void status_statistics(struct log_entry_t *data, time_t timestamp)
 
 			#ifdef __DEBUG__
 				printf("udploggerstats.cc debug: status_maps[%ld].%hu => %lu\n", timestamp, status, count);
+			#endif
+		}
+	}
+}
+
+
+void time_used_statistics(struct log_entry_t *data, time_t timestamp)
+{
+	typedef std::map<short int, long unsigned int> time_used_map_t;
+	typedef std::map<time_t, time_used_map_t> timestamp_time_used_map_t;
+	static timestamp_time_used_map_t time_used_maps;
+
+	if (data != NULL)
+	{
+		if (data->time_used > 10)
+		{
+			/* -1 is used to represent time used of >= 11.  This is non-obvious,
+			 * but then again no other value that I can think of _would_
+			 * be obvious. */
+			time_used_maps[timestamp][-1]++;
+		}
+		else
+		{
+			time_used_maps[timestamp][data->time_used]++;
+		}
+		return;
+	}
+
+	sql_query("CREATE TABLE IF NOT EXISTS time_used_statistics ( timestamp INTEGER, time_used INTEGER, count INTEGER, PRIMARY KEY (timestamp, time_used) );");
+
+	for (timestamp_time_used_map_t::const_iterator i = time_used_maps.begin(); i != time_used_maps.end(); i++)
+	{
+		timestamp = i->first;
+		time_used_map_t time_used_map = i->second;
+
+		for (time_used_map_t::const_iterator j = time_used_map.begin(); j != time_used_map.end(); j++)
+		{
+			short int time_used = j->first;
+			long unsigned int count = j->second;
+
+			sql_query("INSERT OR IGNORE INTO time_used_statistics ( timestamp, time_used, count ) VALUES ( %ld, %hd, 0 );", timestamp, time_used);
+			sql_query("UPDATE time_used_statistics SET count = count + %lu WHERE timestamp = %ld AND status = %hd;", count, timestamp, time_used);
+
+			#ifdef __DEBUG__
+				printf("udploggerstats.cc debug: time_used_maps[%ld].%hd => %lu\n", timestamp, time_used, count);
 			#endif
 		}
 	}
