@@ -7,6 +7,10 @@ CPPFLAGS=${CFLAGS}
 
 all: udploggerd udploggerc udploggergrep udploggerstats
 
+install: all
+	mkdir -v -p "/usr/local/stow/udplogger-r${REVISION}/sbin"
+	cp udploggerc udploggerd udploggergrep udploggerstats "/usr/local/stow/udplogger-r${REVISION}/sbin"
+
 clean:
 	rm -f *.o
 
