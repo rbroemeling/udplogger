@@ -2,12 +2,13 @@
 #define _GNU_SOURCE
 #endif
 #include <getopt.h>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <strings.h>
 #include <sqlite3.h>
-#include <map>
 #include "udplogger.h"
 #include "udploggerparselib.h"
 
@@ -22,7 +23,9 @@ struct udploggerstats_configuration_t {
 
 
 int arguments_parse(int, char **);
+void content_type_statistics(struct log_entry_t *, time_t);
 void hit_statistics(struct log_entry_t *, time_t);
+void host_statistics(struct log_entry_t *, time_t);
 void sql_query(const char *, ...);
 void status_statistics(struct log_entry_t *, time_t);
 void time_used_statistics(struct log_entry_t *, time_t);
@@ -59,14 +62,18 @@ int main (int argc, char **argv)
 		log_data.timestamp.tm_min = 0;
 		timestamp = mktime(&(log_data.timestamp));
 
+		content_type_statistics(&log_data, timestamp);
 		hit_statistics(&log_data, timestamp);
+		host_statistics(&log_data, timestamp);
 		status_statistics(&log_data, timestamp);
 		time_used_statistics(&log_data, timestamp);
 		usersex_statistics(&log_data, timestamp);
 		usertype_statistics(&log_data, timestamp);
 	}
 
+	content_type_statistics(NULL, 0);
 	hit_statistics(NULL, 0);
+	host_statistics(NULL, 0);
 	status_statistics(NULL, 0);
 	time_used_statistics(NULL, 0);
 	usersex_statistics(NULL, 0);
@@ -142,6 +149,42 @@ int arguments_parse(int argc, char **argv)
 }
 
 
+void content_type_statistics(struct log_entry_t *data, time_t timestamp)
+{
+	typedef std::map<std::string, long unsigned int> content_type_map_t;
+	typedef std::map<time_t, content_type_map_t> timestamp_content_type_map_t;
+	static timestamp_content_type_map_t content_type_maps;
+
+	if (data != NULL)
+	{
+		std::string content_type(data->content_type);
+		content_type_maps[timestamp][content_type]++;
+		return;
+	}
+
+	sql_query("CREATE TABLE IF NOT EXISTS content_type_statistics ( timestamp INTEGER, content_type TEXT, count INTEGER, PRIMARY KEY (timestamp, content_type) );");
+
+	for (timestamp_content_type_map_t::const_iterator i = content_type_maps.begin(); i != content_type_maps.end(); i++)
+	{
+		timestamp = i->first;
+		content_type_map_t content_type_map = i->second;
+
+		for (content_type_map_t::const_iterator j = content_type_map.begin(); j != content_type_map.end(); j++)
+		{
+			std::string content_type = j->first;
+			long unsigned int count = j->second;
+
+			sql_query("INSERT OR IGNORE INTO content_type_statistics ( timestamp, content_type, count ) VALUES ( %ld, '%s', 0 );", timestamp, content_type.c_str());
+			sql_query("UPDATE content_type_statistics SET count = count + %lu WHERE timestamp = %ld AND host = '%s';", count, timestamp, content_type.c_str());
+
+			#ifdef __DEBUG__
+				printf("udploggerstats.cc debug: content_type_maps[%ld].%s => %lu\n", timestamp, content_type.c_str(), count);
+			#endif
+		}
+	}
+}
+
+
 void hit_statistics(struct log_entry_t *data, time_t timestamp)
 {
 	typedef std::map<char *, long unsigned int> hit_map_t;
@@ -172,6 +215,42 @@ void hit_statistics(struct log_entry_t *data, time_t timestamp)
 				printf("udploggerstats.cc debug: hit_maps[%ld].%s => %lu\n", timestamp, j->first, j->second);
 			}
 		#endif
+	}
+}
+
+
+void host_statistics(struct log_entry_t *data, time_t timestamp)
+{
+	typedef std::map<std::string, long unsigned int> host_map_t;
+	typedef std::map<time_t, host_map_t> timestamp_host_map_t;
+	static timestamp_host_map_t host_maps;
+
+	if (data != NULL)
+	{
+		std::string host(data->host);
+		host_maps[timestamp][host]++;
+		return;
+	}
+
+	sql_query("CREATE TABLE IF NOT EXISTS host_statistics ( timestamp INTEGER, host TEXT, count INTEGER, PRIMARY KEY (timestamp, host) );");
+
+	for (timestamp_host_map_t::const_iterator i = host_maps.begin(); i != host_maps.end(); i++)
+	{
+		timestamp = i->first;
+		host_map_t host_map = i->second;
+
+		for (host_map_t::const_iterator j = host_map.begin(); j != host_map.end(); j++)
+		{
+			std::string host = j->first;
+			long unsigned int count = j->second;
+
+			sql_query("INSERT OR IGNORE INTO host_statistics ( timestamp, host, count ) VALUES ( %ld, '%s', 0 );", timestamp, host.c_str());
+			sql_query("UPDATE host_statistics SET count = count + %lu WHERE timestamp = %ld AND host = '%s';", count, timestamp, host.c_str());
+
+			#ifdef __DEBUG__
+				printf("udploggerstats.cc debug: host_maps[%ld].%s => %lu\n", timestamp, host.c_str(), count);
+			#endif
+		}
 	}
 }
 
