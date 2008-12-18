@@ -8,19 +8,19 @@
 
 /*
  * Please note that this file cannot link successfully by itself.  It is useful as a part of the udplogger
- * client libraries.  This library implements parsing functionality that can be used to translate a raw-data
+ * data libraries.  This library implements parsing functionality that can be used to translate a raw-data
  * log line into a structure that can be easily used throughout code.
  *
  * This library consists of a main parse_log_line function definition as well as a help parse_* function for
  * each field of the log line.  The main parse_log_line function satisfies the prototype of
- * parse_log_line as defined in udploggerclientlib.h.  Each helper function is called for the field that matches
- * it's index in the parse_functions array.
+ * parse_log_line as defined in udploggerparselib.h.  Each helper function is called for the field that matches
+ * it's index in the parse function arrays.
  *
  * For fields that map static strings to enums, the parse_* function simply calls a map_* function to perform the
  * static string -> enum mapping.  This is done so that the map_* functions can be used in other places in the
  * codebase (i.e. parsing command-line parameter arguments).
  *
- * See 'udploggerc.c' for a simple example.
+ * See 'udploggergrep.cc' for a simple example.
  */
 
 
@@ -28,7 +28,9 @@ void parse_body_size(const char *, struct log_entry_t *);
 void parse_bytes_incoming(const char *, struct log_entry_t *);
 void parse_bytes_outgoing(const char *, struct log_entry_t *);
 void parse_connection_status(const char *, struct log_entry_t *);
+void parse_content_type(const char *, struct log_entry_t *);
 void parse_forwarded_for(const char *, struct log_entry_t *);
+void parse_host(const char *, struct log_entry_t *);
 void parse_method(const char *, struct log_entry_t *);
 void parse_nexopia_userage(const char *, struct log_entry_t *);
 void parse_nexopia_userid(const char *, struct log_entry_t *);
@@ -46,6 +48,7 @@ void parse_tag(const char *, struct log_entry_t *);
 void parse_time_used(const char *, struct log_entry_t *);
 void parse_timestamp(const char*, struct log_entry_t *);
 void parse_user_agent(const char *, struct log_entry_t *);
+void parse_version(const char *, struct log_entry_t *);
 
 
 /**
@@ -58,11 +61,25 @@ void parse_log_line(char *line, struct log_entry_t *data)
 {
 	int length;
 	int i;
+
+	/**
+	 * Base parse functions -- these functions parse all the fields that are
+	 * present before the web-server's (versioned) web-log/access fields.
+	 **/
 	void (*parse_functions[])(const char *, struct log_entry_t *) = {
 		&parse_timestamp,
 		&parse_source,
 		&parse_serial,
 		&parse_tag,
+		NULL
+	};
+
+	/**
+	 * v1 parse functions -- this is the parse order for version 1 of the
+	 * web-server's fields.  The fields are representative of version 1 if
+	 * the first field does not match 'v<VERSION NUMBER>'.
+	 **/
+	void (*parse_functions_v1[])(const char *, struct log_entry_t *) = {
 		&parse_method,
 		&parse_status,
 		&parse_body_size,
@@ -83,6 +100,37 @@ void parse_log_line(char *line, struct log_entry_t *data)
 		&parse_nexopia_usertype,
 		NULL
 	};
+
+	/**
+	 * v2 parse functions -- this is the parse order for version 2 of the
+	 * web-server's fields.  The fields are representative of version 2 if
+	 * the first field is 'v2'.
+	 **/
+	void (*parse_functions_v2[])(const char *, struct log_entry_t *) = {
+		&parse_version,
+		&parse_method,
+		&parse_status,
+		&parse_body_size,
+		&parse_bytes_incoming,
+		&parse_bytes_outgoing,
+		&parse_time_used,
+		&parse_connection_status,
+		&parse_request_url,
+		&parse_query_string,
+		&parse_remote_address,
+		&parse_host,
+		&parse_user_agent,
+		&parse_forwarded_for,
+		&parse_referer,
+		&parse_content_type,
+		&parse_nexopia_userid,
+		&parse_nexopia_userage,
+		&parse_nexopia_usersex,
+		&parse_nexopia_userlocation,
+		&parse_nexopia_usertype,
+		NULL
+	};
+	void (**pfunc)(const char *, struct log_entry_t *);
 	char *ptr;
 	char tmp[PACKET_MAXIMUM_SIZE];
 
@@ -96,11 +144,38 @@ void parse_log_line(char *line, struct log_entry_t *data)
 		}
 	}
 
+	/* Parse the first fields, those that are basic to udplogger functionality. */
+	pfunc = parse_functions;
 	ptr = tmp;
 	i = 0;
-	while ((ptr < (tmp + length)) && (parse_functions[i] != NULL))
+	while ((ptr < (tmp + length)) && (pfunc[i] != NULL))
 	{
-		(*parse_functions[i])(ptr, data);
+		(*pfunc[i])(ptr, data);
+		i++;
+		while ((ptr < (tmp + length)) && (*ptr != '\0'))
+		{
+			ptr++;
+		}
+		ptr++;
+	}
+
+	/* Begin versioned parsing by checking the current field. */
+	if (! strcasecmp(ptr, "v2"))
+	{
+		pfunc = parse_functions_v2;
+	}
+	else
+	{
+		data->content_type[0] = '\0';
+		data->host[0] = '\0';
+		data->version = 1;
+		pfunc = parse_functions_v1;
+	}
+
+	i = 0;
+	while ((ptr < (tmp + length)) && (pfunc[i] != NULL))
+	{
+		(*pfunc[i])(ptr, data);
 		i++;
 		while ((ptr < (tmp + length)) && (*ptr != '\0'))
 		{
@@ -242,6 +317,22 @@ void parse_connection_status(const char *field, struct log_entry_t *data)
 }
 
 
+void parse_content_type(const char *field, struct log_entry_t *data)
+{
+	if (! strcasecmp(field, "-"))
+	{
+		data->content_type[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->content_type), field, strlen(field) + 1);
+	}
+#ifdef __DEBUG__
+	printf("udploggerparselib.cc debug:    parse_content_type('%s') => '%s'\n", field, data->content_type);
+#endif
+}
+
+
 void parse_forwarded_for(const char *field, struct log_entry_t *data)
 {
 	if (! strcasecmp(field, "-"))
@@ -254,6 +345,22 @@ void parse_forwarded_for(const char *field, struct log_entry_t *data)
 	}
 #ifdef __DEBUG__
 	printf("udploggerparselib.cc debug:    parse_forwarded_for('%s') => '%s'\n", field, data->forwarded_for);
+#endif
+}
+
+
+void parse_host(const char *field, struct log_entry_t *data)
+{
+	if (! strcasecmp(field, "-"))
+	{
+		data->host[0] = '\0';
+	}
+	else
+	{
+		memcpy(&(data->host), field, strlen(field) + 1);
+	}
+#ifdef __DEBUG__
+	printf("udploggerparselib.cc debug:    parse_host('%s') => '%s'\n", field, data->host);
 #endif
 }
 
@@ -498,5 +605,17 @@ void parse_user_agent(const char *field, struct log_entry_t *data)
 	}
 #ifdef __DEBUG__
 	printf("udploggerparselib.cc debug:    parse_user_agent('%s') => '%s'\n", field, data->user_agent);
+#endif
+}
+
+
+void parse_version(const char *field, struct log_entry_t *data)
+{
+	if ((! sscanf(field, "v%hu", &(data->version))) && (! sscanf(field, "V%hu", &(data->version))))
+	{
+		data->version = 0;
+	}
+#ifdef __DEBUG__
+	printf("udploggerparselib.cc debug:    parse_version('%s') => %hu\n", field, data->version);
 #endif
 }

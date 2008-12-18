@@ -62,7 +62,9 @@ struct log_entry_t
 	uint32_t bytes_incoming;                         /* %I - bytes incoming */
 	uint32_t bytes_outgoing;                         /* %O - bytes outgoing */
 	enum connection_status_enum connection_status;   /* %X - connection status */
+	char content_type[INPUT_BUFFER_SIZE];            /* %{Content-Type} - content type string */
 	char forwarded_for[INPUT_BUFFER_SIZE];           /* %{X-Forwarded-For} - X-Forwarded-For string */
+	char host[INPUT_BUFFER_SIZE];                    /* %{Host} - host string */
 	enum request_method_enum method;                 /* %m - request method */
 	uint16_t nexopia_userage;                        /* %{X-LIGHTTPD-age}o - nexopia user age */
 	unsigned long nexopia_userid;                    /* %{X-LIGHTTPD-userid}o - nexopia UID */
@@ -82,6 +84,7 @@ struct log_entry_t
 	struct tm timestamp;                             /* timestamp of log entry */
 	uint16_t time_used;                              /* %T - time used (seconds) */
 	char user_agent[INPUT_BUFFER_SIZE];              /* %{User-agent} - user agent string */
+	uint16_t version;                                /* version of the log line that this log entry is sourced from */
 };
 
 
