@@ -158,6 +158,17 @@ void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 	if (data != NULL)
 	{
 		std::string content_type(data->content_type);
+
+		/*
+		 * Trim any ;-suffix off of our content-type, as we don't care to gather
+		 * statistics on character set or similar options.
+		 */
+		size_t semicolon_pos = content_type.find(';');
+		if (semicolon_pos != std::string::npos)
+		{
+			content_type.erase(semicolon_pos);
+		}
+
 		content_type_maps[timestamp][content_type]++;
 		return;
 	}
