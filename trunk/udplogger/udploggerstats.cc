@@ -239,6 +239,17 @@ void host_statistics(struct log_entry_t *data, time_t timestamp)
 	if (data != NULL)
 	{
 		std::string host(data->host);
+
+		/*
+		 * Trim any :-suffix (port) off of our host, as we don't care to gather
+		 * statistics on which port the connection is to.
+		 */
+		size_t colon_pos = host.find(':');
+		if (colon_pos != std::string::npos)
+		{
+			host.erase(colon_pos);
+		}
+
 		host_maps[timestamp][host]++;
 		return;
 	}
