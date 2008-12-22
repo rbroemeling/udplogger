@@ -170,6 +170,10 @@ void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 			content_type.erase(semicolon_pos);
 		}
 
+		if (content_type_maps[timestamp].find(content_type) == content_type_maps[timestamp].end())
+		{
+			content_type_maps[timestamp][content_type].resize(2);
+		}
 		content_type_maps[timestamp][content_type][0]++;
 		content_type_maps[timestamp][content_type][1] += data->bytes_outgoing;
 		return;
