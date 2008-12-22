@@ -9,6 +9,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sqlite3.h>
+#include <vector>
 #include "udplogger.h"
 #include "udploggerparselib.h"
 
@@ -151,7 +152,7 @@ int arguments_parse(int argc, char **argv)
 
 void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 {
-	typedef std::map<std::string, long unsigned int> content_type_map_t;
+	typedef std::map<std::string, std::vector<long unsigned int> > content_type_map_t;
 	typedef std::map<time_t, content_type_map_t> timestamp_content_type_map_t;
 	static timestamp_content_type_map_t content_type_maps;
 
@@ -169,11 +170,12 @@ void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 			content_type.erase(semicolon_pos);
 		}
 
-		content_type_maps[timestamp][content_type]++;
+		content_type_maps[timestamp][content_type][0]++;
+		content_type_maps[timestamp][content_type][1] += data->bytes_outgoing;
 		return;
 	}
 
-	sql_query("CREATE TABLE IF NOT EXISTS content_type_statistics ( timestamp INTEGER, content_type TEXT, count INTEGER, PRIMARY KEY (timestamp, content_type) );");
+	sql_query("CREATE TABLE IF NOT EXISTS content_type_statistics ( timestamp INTEGER, content_type TEXT, count INTEGER, transferred INTEGER, PRIMARY KEY (timestamp, content_type) );");
 
 	for (timestamp_content_type_map_t::const_iterator i = content_type_maps.begin(); i != content_type_maps.end(); i++)
 	{
@@ -183,13 +185,13 @@ void content_type_statistics(struct log_entry_t *data, time_t timestamp)
 		for (content_type_map_t::const_iterator j = content_type_map.begin(); j != content_type_map.end(); j++)
 		{
 			std::string content_type = j->first;
-			long unsigned int count = j->second;
+			std::vector<long unsigned int> content_type_statistics = j->second;
 
-			sql_query("INSERT OR IGNORE INTO content_type_statistics ( timestamp, content_type, count ) VALUES ( %ld, '%s', 0 );", timestamp, content_type.c_str());
-			sql_query("UPDATE content_type_statistics SET count = count + %lu WHERE timestamp = %ld AND content_type = '%s';", count, timestamp, content_type.c_str());
+			sql_query("INSERT OR IGNORE INTO content_type_statistics ( timestamp, content_type, count, transferred ) VALUES ( %ld, '%s', 0, 0 );", timestamp, content_type.c_str());
+			sql_query("UPDATE content_type_statistics SET count = count + %lu, transferred = transferred + %lu WHERE timestamp = %ld AND content_type = '%s';", content_type_statistics[0], content_type_statistics[1], timestamp, content_type.c_str());
 
 			#ifdef __DEBUG__
-				printf("udploggerstats.cc debug: content_type_maps[%ld].%s => %lu\n", timestamp, content_type.c_str(), count);
+				printf("udploggerstats.cc debug: content_type_maps[%ld].%s => ( count: %lu, transferred: %lu )\n", timestamp, content_type.c_str(), content_type_statistics[0], content_type_statistics[1]);
 			#endif
 		}
 	}
