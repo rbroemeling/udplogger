@@ -19,12 +19,14 @@ def main(options):
 			if hasattr(object, 'save') and hasattr(object, 'update'):
 				statistics_gatherers.append(object())
 
+	lineno = 0
 	for line in sys.stdin:
+		lineno += 1
 		line = line.rstrip()
 		try:
 			log_data.parse(line)
 		except Exception, e:
-			sys.stderr.write('skipping line, could not parse data "%s": %s\n' % (line.replace('\x1e', '\\x1e'), str(e)))
+			sys.stderr.write('skipping line #%d, could not parse data "%s": %s\n' % (lineno, line.replace('\x1e', '\\x1e'), str(e)))
 			continue
 
 		#
