@@ -60,7 +60,11 @@ def parse_arguments(argv):
 		elif o in ('-v', '--verbose'):
 			options['verbosity'] += 1
 		elif o in ('--version'):
-			print '$Revision$'
+			r = '$Revision$'
+			r = r.strip(' $')
+			r = r.lower()
+			r = r.replace(': ', ' r')
+			print 'udploggerstats.py', r
 			sys.exit(0)
 		else:
 			assert False, 'unhandled option: ' + o
