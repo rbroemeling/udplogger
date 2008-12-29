@@ -256,7 +256,12 @@ class LogLine(LogLine_v2):
 	def parse(self, raw):
 		self.raw = raw
 		fields = self.raw.split('\x1e')
-		if fields[4] == 'v2':
-			LogLine_v2.parse(self, fields)
-		else:
-			LogLine_v1.parse(self, fields)
+		try:
+			if fields[4] == 'v2':
+				LogLine_v2.parse(self, fields)
+			else:
+				LogLine_v1.parse(self, fields)
+		except Exception, e:
+			sys.stderr.write('self.raw: ' + self.raw + '\n')
+			sys.stderr.write('fields: ' + str(fields) + '\n')
+			raise e
