@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import sys
 import time
 
 # On any call to .parse(), each class must fully initialize all the fields that it has authority over.
@@ -19,6 +18,7 @@ class LogLine_v1:
 		return s
 
 	def parse(self, fields):
+		assert len(fields) == 22, "invalid number of fields in log line"
 		self.parse_datetime(fields[0])
 		self.parse_source(fields[1])
 		self.parse_serial(fields[2])
@@ -207,6 +207,7 @@ class LogLine_v1:
 
 class LogLine_v2(LogLine_v1):
 	def parse(self, fields):
+		assert len(fields) == 25, "invalid number of fields in log line"
 		self.parse_datetime(fields[0])
 		self.parse_source(fields[1])
 		self.parse_serial(fields[2])
@@ -257,12 +258,7 @@ class LogLine(LogLine_v2):
 	def parse(self, raw):
 		self.raw = raw
 		fields = self.raw.split('\x1e')
-		try:
-			if fields[4] == 'v2':
-				LogLine_v2.parse(self, fields)
-			else:
-				LogLine_v1.parse(self, fields)
-		except Exception, e:
-			sys.stderr.write('self.raw: ' + self.raw + '\n')
-			sys.stderr.write('fields: ' + str(fields) + '\n')
-			raise e
+		if fields[4] == 'v2':
+			LogLine_v2.parse(self, fields)
+		else:
+			LogLine_v1.parse(self, fields)

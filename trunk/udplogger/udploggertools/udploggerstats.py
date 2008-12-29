@@ -21,7 +21,11 @@ def main(options):
 
 	for line in sys.stdin:
 		line = line.rstrip()
-		log_data.parse(line)
+		try:
+			log_data.parse(line)
+		except Exception, e:
+			sys.stderr.write('skipping line, could not parse data "%s": %s\n' % (line.replace('\x1e', '\\x1e'), str(e)))
+			continue
 
 		#
 		# Reach into our log_data and reset the time to have zero minutes/seconds.
