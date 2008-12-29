@@ -94,7 +94,6 @@ class LogLine_v1:
 			try:
 				self.nexopia_userage = int(field)
 			except ValueError:
-				print field
 				self.nexopia_userage = None
 		else:
 			self.nexopia_userage = None
