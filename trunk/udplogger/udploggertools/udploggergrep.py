@@ -23,6 +23,10 @@ def main(options):
 			if options['status'] != log_data.status:
 				continue
 
+		if not options['tag'] is None:
+			if options['tag'] != log_data.tag:
+				continue
+
 		if not options['query'] is None:
 			if options['query'].search(log_data.query_string) == None:
 				continue
@@ -37,10 +41,11 @@ def parse_arguments(argv):
 	options = {}
 	options['query'] = None
 	options['status'] = None
+	options['tag'] = None
 	options['url'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'hq:s:u:v', ['help', 'query=', 'status=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'hq:s:t:u:v', ['help', 'query=', 'status=', 'tag=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -63,6 +68,8 @@ def parse_arguments(argv):
 				sys.stderr.write('invalid argument for option status: "%s"\n' % (a))
 				usage()
 				sys.exit(2)
+		elif o in ('-t', '--tag'):
+			options['tag'] = a
 		elif o in ('-u', '--url'):
 			try:
 				options['url'] = re.compile(a)
@@ -88,6 +95,7 @@ Usage %s [OPTIONS]
   -h, --help                                     display this help and exit
   -q, --query <regexp>                           show log entries whose query string matches <regexp>
   -s, --status <status code>                     show log entries whose status code equals <status code>
+  -t, --tag <tag>                                show log entries whose tag equals <tag>
   -u, --url <regexp>                             show log entries whose url matches <regexp>
   -v, --version                                  display udploggergrep.py version and exit
 ''' % (sys.argv[0])
