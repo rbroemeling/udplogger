@@ -45,11 +45,14 @@ class ContentTypeStatistic(UDPLoggerStatistic):
 		database_connection.commit()
 
 	def update(self, log):
-		i = log.content_type.find(';')
-		if i > -1:
-			content_type = log.content_type[:i]
+		if log.content_type is None:
+			content_type = ""
 		else:
-			content_type = log.content_type
+			i = log.content_type.find(';')
+			if i > -1:
+				content_type = log.content_type[:i]
+			else:
+				content_type = log.content_type
 		if not log.unix_timestamp in self.results:
 			self.results[log.unix_timestamp] = {}
 		if not content_type in self.results[log.unix_timestamp]:
@@ -96,8 +99,10 @@ class HitStatistic(UDPLoggerStatistic):
 			self.results[log.unix_timestamp]['bytes_incoming'] = 0
 			self.results[log.unix_timestamp]['bytes_outgoing'] = 0
 			self.results[log.unix_timestamp]['hits'] = 0
-		self.results[log.unix_timestamp]['bytes_incoming'] += log.bytes_incoming
-		self.results[log.unix_timestamp]['bytes_outgoing'] += log.bytes_outgoing
+		if not log.bytes_incoming is None:
+			self.results[log.unix_timestamp]['bytes_incoming'] += log.bytes_incoming
+		if not log.bytes_outgoing is None:
+			self.results[log.unix_timestamp]['bytes_outgoing'] += log.bytes_outgoing
 		self.results[log.unix_timestamp]['hits'] += 1
 
 class HostStatistic(UDPLoggerStatistic):
