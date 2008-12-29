@@ -51,8 +51,8 @@ def parse_arguments(argv):
 
 	try:
 		opts, args = getopt.getopt(argv, 'd:hv', ['database=', 'help', 'verbose', 'version'])
-	except getopt.GetoptError, err:
-		print str(err)
+	except getopt.GetoptError, e:
+		print str(e)
 		usage()
 		sys.exit(3)
 	for o, a in opts:
