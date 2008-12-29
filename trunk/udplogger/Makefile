@@ -3,13 +3,12 @@ REVISION=${shell svn info . | grep '^Revision: ' | sed -e 's/[^0-9]//g'}
 CC=gcc
 CFLAGS=-pedantic-errors -Wall -DREVISION=${REVISION}
 #CFLAGS+=-D__DEBUG__
-CPPFLAGS=${CFLAGS}
 
-all: udploggerd udploggerc udploggergrep udploggerstats
+all: udploggerd udploggerc
 
 install: all
 	mkdir -v -p "/usr/local/stow/udplogger-r${REVISION}/sbin"
-	cp udploggerc udploggerd udploggergrep udploggerstats "/usr/local/stow/udplogger-r${REVISION}/sbin"
+	cp udploggerc udploggerd "/usr/local/stow/udplogger-r${REVISION}/sbin"
 
 clean:
 	rm -f *.o
@@ -21,8 +20,6 @@ proper: realclean
 realclean: clean
 	rm -f udploggerc
 	rm -f udploggerd
-	rm -f udploggergrep
-	rm -f udploggerstats
 	rm -f udplogger-r*.tar.gz
 
 rebuild: realclean all
@@ -39,9 +36,3 @@ udploggerc: udploggerclientlib.o udploggerc.o socket.o
 
 udploggerd: beacon.o socket.o trim.o udploggerd.o
 	${CC}   ${^} ${LDLIBS} -pthread -o ${@}
-
-udploggergrep: udploggerparselib.o udploggergrep.o
-	${CC}   ${^} ${LDLIBS} -l pcre -l stdc++ -o ${@}
-
-udploggerstats: udploggerparselib.o udploggerstats.o
-	${CC}   ${^} ${LDLIBS} -l sqlite3 -l stdc++ -o ${@}
