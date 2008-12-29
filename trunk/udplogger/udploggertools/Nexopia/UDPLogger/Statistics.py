@@ -129,11 +129,14 @@ class HostStatistic(UDPLoggerStatistic):
 		database_connection.commit()
 
 	def update(self, log):
-		i = log.host.find(':')
-		if i > -1:
-			host = log.host[:i]
+		if log.host is None:
+			host = ""
 		else:
-			host = log.host
+			i = log.host.find(':')
+			if i > -1:
+				host = log.host[:i]
+			else:
+				host = log.host
 		if not log.unix_timestamp in self.results:
 			self.results[log.unix_timestamp] = {}
 		if not host in self.results[log.unix_timestamp]:
