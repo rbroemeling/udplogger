@@ -26,7 +26,7 @@ rebuild: realclean all
 
 source-package:
 	mkdir "udplogger-r${REVISION}"
-	cp *.cc *.c *.h Makefile "udplogger-r${REVISION}"
+	cp *.c *.h Makefile "udplogger-r${REVISION}"
 	perl -i -p -e "s/^REVISION=.*/REVISION=${REVISION}/" "udplogger-r${REVISION}/Makefile"
 	tar cfz "udplogger-r${REVISION}.tar.gz" "udplogger-r${REVISION}"
 	rm -rf "udplogger-r${REVISION}"
