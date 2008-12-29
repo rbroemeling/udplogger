@@ -23,6 +23,7 @@ source-package:
 	cp *.py Makefile "udploggertools-r${REVISION}"
 	rsync --recursive --exclude=.svn Nexopia "udploggertools-r${REVISION}"
 	perl -i -p -e "s/^REVISION=.*/REVISION=${REVISION}/" "udploggertools-r${REVISION}/Makefile"
+	perl -i -p -e "s/Revision: \d+ /Revision: ${REVISION} /" "udploggertools-r${REVISION}/udploggergrep.py"
 	perl -i -p -e "s/Revision: \d+ /Revision: ${REVISION} /" "udploggertools-r${REVISION}/udploggerstats.py"
 	tar cfz "udploggertools-r${REVISION}.tar.gz" "udploggertools-r${REVISION}"
 	rm -rf "udploggertools-r${REVISION}"
