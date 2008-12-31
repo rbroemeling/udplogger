@@ -11,31 +11,7 @@ class UDPLoggerStatistic:
 				s += '\t\t%-25s\t%s\n' % (str(i), str(self.results[unix_timestamp][i]))
 		return s
 
-	def series_fmt(self, series, fmt_idx=[-1]):
-		formats = ['b-', 'g-', 'r-', 'c-', 'm-', 'y-', 'k-']
-		fmt_idx[0] += 1
-		if fmt_idx[0] >= len(formats):
-			fmt_idx[0] = 0
-		return formats[fmt_idx[0]]
-
-	def series_label(self, series):
-		return series
-
 class ContentTypeStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT content_type
-								FROM content_type_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY content_type''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS content_type_statistics (
@@ -86,10 +62,6 @@ class ContentTypeStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp][content_type]['transferred'] += log.bytes_outgoing
 
 class HitStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = ['hits', 'bytes_incoming', 'bytes_outgoing']
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS hit_statistics (
@@ -133,20 +105,6 @@ class HitStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp]['hits'] += 1
 
 class HostStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT host
-								FROM host_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY content_type''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS host_statistics (
@@ -190,20 +148,6 @@ class HostStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp][host] += 1
 
 class StatusStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT status
-								FROM status_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY content_type''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS status_statistics (
@@ -239,20 +183,6 @@ class StatusStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp][log.status] += 1
 
 class TimeUsedStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT time_used
-								FROM time_used_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY ''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS time_used_statistics (
@@ -292,20 +222,6 @@ class TimeUsedStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp][time_used] += 1
 
 class UserSexStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT sex
-								FROM usersex_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY sex''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS usersex_statistics (
@@ -345,20 +261,6 @@ class UserSexStatistic(UDPLoggerStatistic):
 		self.results[log.unix_timestamp][usersex] += 1
 
 class UserTypeStatistic(UDPLoggerStatistic):
-	def enumerate_series(self, database_connection, start_timestamp, end_timestamp):
-		series = []
-		cursor = database_connection.cursor()
-		cursor.execute('''SELECT DISTINCT type
-								FROM usertype_statistics
-								WHERE
-									timestamp <= ? AND
-									timestamp >= ?
-								ORDER BY type''', (start_timestamp, end_timestamp))
-		for row in cursor:
-			series.append(row[0])
-		cursor.close()
-		return series
-
 	def save(self, database_connection):
 		cursor = database_connection.cursor()
 		cursor.execute('''CREATE TABLE IF NOT EXISTS usertype_statistics (
