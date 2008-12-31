@@ -1,4 +1,18 @@
 #!/usr/bin/python
+
+import inspect
+import sys
+
+def available_statistics():
+	module = sys.modules[__name__]
+	results = []
+	for object in module.__dict__:
+		object = getattr(module, object)
+		if inspect.isclass(object):
+			if hasattr(object, 'save') and hasattr(object, 'update'):
+				results.append(object())
+	return results
+
 class UDPLoggerStatistic:
 	def __init__(self):
 		self.results = {}

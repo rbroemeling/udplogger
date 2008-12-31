@@ -4,7 +4,6 @@ import Nexopia.UDPLogger.Parse
 import Nexopia.UDPLogger.Statistics
 
 import getopt
-import inspect
 import sqlite3
 import sys
 import time
@@ -12,12 +11,7 @@ import time
 def main(options):
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
 
-	statistics_gatherers = []
-	for object in Nexopia.UDPLogger.Statistics.__dict__:
-		object = getattr(Nexopia.UDPLogger.Statistics, object)
-		if inspect.isclass(object):
-			if hasattr(object, 'save') and hasattr(object, 'update'):
-				statistics_gatherers.append(object())
+	statistics_gatherers = Nexopia.UDPLogger.Statistics.available_statistics()
 
 	lineno = 0
 	for line in sys.stdin:
