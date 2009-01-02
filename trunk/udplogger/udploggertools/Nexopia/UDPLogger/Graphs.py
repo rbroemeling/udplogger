@@ -187,6 +187,11 @@ class TotalHitsGraph(UDPLoggerGraph):
 	def description(self):
 		return 'Hits (Total)'
 
+	def series_fmt(self, series):
+		if series == 'Hits':
+			return 'b-*'
+		return UDPLoggerGraph.series_fmt(self, series)
+
 class TotalTransferredGraph(UDPLoggerGraph):
 	def load(self, start_timestamp, end_timestamp):
 		cursor = self.db.cursor()
@@ -198,6 +203,13 @@ class TotalTransferredGraph(UDPLoggerGraph):
 
 	def description(self):
 		return 'Transferred (MByte) (Total)'
+
+	def series_fmt(self, series):
+		if series == 'Outgoing':
+			return 'g-*'
+		elif series == 'Incoming':
+			return 'b-*'
+		return UDPLoggerGraph.series_fmt(self, series)
 
 class TimeUsedGraph(UDPLoggerGraph):
 	def load(self, start_timestamp, end_timestamp):
