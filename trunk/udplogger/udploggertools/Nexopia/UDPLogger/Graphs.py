@@ -61,13 +61,14 @@ class UDPLoggerGraph:
 
 	def csv(self, start_timestamp, end_timestamp):
 		self.load(start_timestamp, end_timestamp)
-		s = ''
-		s += '"Timestamp",'
+		s  = '"' + self.description() + '"\n'
+		s += '"Timestamp","Date","Start Time","End Time",'
 		for plot in self.plots:
 			s += '"' + self.series_label(plot) + '",'
 		s = s.rstrip(',') + '\n'
 		for i in range(len(self.timestamps)):
 			s += '"' + str(self.timestamps[i]) + '",'
+			s += time.strftime('"%d-%b-%Y","%H:00:00","%H:59:59",', time.localtime(self.timestamps[i]))
 			for plot in self.plots:
 				s += '"' + str(self.plots[plot][i]) + '",'
 			s = s.rstrip(',') + '\n'
