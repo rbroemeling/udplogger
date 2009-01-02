@@ -27,6 +27,18 @@ def main(options):
 			if options['tag'] != log_data.tag:
 				continue
 
+		if not options['time-used'] is None:
+			if options['time-used'] != log_data.time_used:
+				continue
+
+		if not options['content-type'] is None:
+			if options['content-type'].search(log_data.content_type) == None:
+				continue
+
+		if not options['host'] is None:
+			if options['host'].search(log_data.host) == None:
+				continue
+
 		if not options['query'] is None:
 			if options['query'].search(log_data.query_string) == None:
 				continue
@@ -39,21 +51,38 @@ def main(options):
 
 def parse_arguments(argv):
 	options = {}
+	options['content-type'] = None
+	options['host'] = None
 	options['query'] = None
 	options['status'] = None
 	options['tag'] = None
+	options['time-used'] = None
 	options['url'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'hq:s:t:u:v', ['help', 'query=', 'status=', 'tag=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'c:hq:s:t:u:v', ['content-type=', 'help', 'host=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
 		sys.exit(3)
 	for o, a in opts:
-		if o in ('-h', '--help'):
+		if o in ('-c', '--content-type'):
+			try:
+				options['content-type'] = re.compile(a)
+			except Exception, e:
+				sys.stderr.write('invalid regular expression given for option content-type: "%s" (%s)\n' % ((a), str(e)))
+				usage()
+				sys.exit(2)
+		elif o in ('-h', '--help'):
 			usage()
 			sys.exit(0)
+		elif o in ('--host'):
+			try:
+				options['host'] = re.compile(a)
+			except Exception, e:
+				sys.stderr.write('invalid regular expression given for option host: "%s" (%s)\n' % ((a), str(e)))
+				usage()
+				sys.exit(2)
 		elif o in ('-q', '--query'):
 			try:
 				options['query'] = re.compile(a)
@@ -70,6 +99,15 @@ def parse_arguments(argv):
 				sys.exit(2)
 		elif o in ('-t', '--tag'):
 			options['tag'] = a
+		elif o in ('--time-used'):
+			try:
+				options['time-used'] = int(a)
+				if options['time-used'] not in range(-1, 11):
+					raise ValueError
+			except (TypeError, ValueError), e:
+				sys.stderr.write('invalid argument for option time-used (must be integer x, where -1 <= x <= 10): "%s"\n' % (a))
+				usage()
+				sys.exit(2)
 		elif o in ('-u', '--url'):
 			try:
 				options['url'] = re.compile(a)
@@ -92,10 +130,13 @@ def usage():
 	print '''
 Usage %s [OPTIONS]
 
+  -c, --content-type <regexp>                    show log entries whose content-type matches <regexp>
   -h, --help                                     display this help and exit
+      --host <regexp>                            show log entries whose host matches <regexp>
   -q, --query <regexp>                           show log entries whose query string matches <regexp>
   -s, --status <status code>                     show log entries whose status code equals <status code>
   -t, --tag <tag>                                show log entries whose tag equals <tag>
+      --time-used <time in seconds>              show log entries that took exactly <time in seconds> to complete
   -u, --url <regexp>                             show log entries whose url matches <regexp>
   -v, --version                                  display udploggergrep.py version and exit
 ''' % (sys.argv[0])
