@@ -222,6 +222,33 @@ class TimeUsedGraph(UDPLoggerGraph):
 	def description(self):
 		return 'Request Completion Times'
 
+	def series_fmt(self, series):
+		if series == -1:
+			return 'r-.'
+		elif series == 10:
+			return 'r-*'
+		elif series == 9:
+			return 'y-.'
+		elif series == 8:
+			return 'y-*'
+		elif series == 7:
+			return 'm-.'
+		elif series == 6:
+			return 'm-*'
+		elif series == 5:
+			return 'c-.'
+		elif series == 4:
+			return 'c-*'
+		elif series == 3:
+			return 'b-.'
+		elif series == 2:
+			return 'b-*'
+		elif series == 1:
+			return 'g-.'
+		elif series == 0:
+			return 'g-*'
+		return UDPLoggerGraph.series_fmt(self, series)
+
 	def series_label(self, series):
 		if series == -1:
 			return '11+ seconds'
