@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import BaseHTTPServer
 import inspect
 import locale
 locale.setlocale(locale.LC_NUMERIC, 'en_CA.UTF-8')
@@ -96,7 +97,6 @@ class UDPLoggerGraph:
 		plt.savefig( output_buffer, format='png' )
 		return output_buffer.getvalue()
 
-
 	def series_fmt(self, series, fmt_idx=[-1]):
 		'''Returns the matplotlib format string that should be used to graph the
 		given series.  For a specification of the matplotlib format string, see.
@@ -175,6 +175,38 @@ class StatusGraph(UDPLoggerGraph):
 
 	def description(self):
 		return 'Status Codes'
+
+	def series_fmt(self, series):
+		if series == 200:
+			return 'b-'
+		elif series == 301:
+			return 'g-.'
+		elif series == 302:
+			return 'g:'
+		elif series == 304:
+			return 'g-'
+		elif series == 400:
+			return 'c:'
+		elif series == 401:
+			return 'y-.+'
+		elif series == 403:
+			return 'y-.x'
+		elif series == 404:
+			return 'y-'
+		elif series == 411:
+			return 'c:+'
+		elif series == 417:
+			return 'c:x'
+		elif series == 500:
+			return 'r-'
+		elif series == 501:
+			return 'r:'
+		return UDPLoggerGraph.series_fmt(self, series)
+
+	def series_label(self, series):
+		if series in BaseHTTPServer.BaseHTTPRequestHandler.responses:
+			return str(series) + ': ' + BaseHTTPServer.BaseHTTPRequestHandler.responses[series][0]
+		return UDPLoggerGraph.series_label(self, series)
 
 class TotalHitsGraph(UDPLoggerGraph):
 	def load(self, start_timestamp, end_timestamp):
