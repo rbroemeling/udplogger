@@ -228,6 +228,24 @@ class UserSexGraph(UDPLoggerGraph):
 	def description(self):
 		return 'User Sex'
 
+	def series_fmt(self, series):
+		if series == 'unknown':
+			return 'k-.+'
+		elif series == 'female':
+			return 'r-.*'
+		elif series == 'male':
+			return 'b-.d'
+		return UDPLoggerGraph.series_fmt(self, series)
+
+	def series_label(self, series):
+		if series == 'unknown':
+			return 'Unknown'
+		elif series == 'female':
+			return 'Female'
+		elif series == 'male':
+			return 'Male'
+		return UDPLoggerGraph.series_label(self, series)
+
 class UserTypeGraph(UDPLoggerGraph):
 	def load(self, start_timestamp, end_timestamp):
 		cursor = self.db.cursor()
@@ -241,7 +259,7 @@ class UserTypeGraph(UDPLoggerGraph):
 
 	def series_fmt(self, series):
 		if series == 'unknown':
-			return 'k:+'
+			return 'k-.+'
 		elif series == 'anon':
 			return 'c:x'
 		elif series == 'plus':
