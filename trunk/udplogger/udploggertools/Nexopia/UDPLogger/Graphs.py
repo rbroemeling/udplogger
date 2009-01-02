@@ -114,7 +114,25 @@ class UDPLoggerGraph:
 			return '(None)'
 		return str(series)
 
-class ContentTypeHitsGraph(UDPLoggerGraph):
+class ContentTypeGraph(UDPLoggerGraph):
+	def series_fmt(self, series):
+		if series == '':
+			return 'k-'
+		elif series == 'image/gif':
+			return 'b-.x'
+		elif series == 'image/jpeg':
+			return 'b-*'
+		elif series == 'image/png':
+			return 'b:+'
+		elif series == 'text/css':
+			return 'g:+'
+		elif series == 'text/html':
+			return 'g-*'
+		elif series == 'text/javascript':
+			return 'g-.x'
+		return UDPLoggerGraph.series_fmt(self, series)
+
+class ContentTypeHitsGraph(ContentTypeGraph):
 	def load(self, start_timestamp, end_timestamp):
 		cursor = self.db.cursor()
 		cursor.execute('SELECT timestamp, content_type, count FROM content_type_statistics WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp', (start_timestamp, end_timestamp))
@@ -125,7 +143,7 @@ class ContentTypeHitsGraph(UDPLoggerGraph):
 	def description(self):
 		return 'Hits per Content Type'
 
-class ContentTypeTransferredGraph(UDPLoggerGraph):
+class ContentTypeTransferredGraph(ContentTypeGraph):
 	def load(self, start_timestamp, end_timestamp):
 		cursor = self.db.cursor()
 		cursor.execute('SELECT timestamp, content_type, transferred FROM content_type_statistics WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp', (start_timestamp, end_timestamp))
