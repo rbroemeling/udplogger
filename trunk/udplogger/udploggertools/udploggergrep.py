@@ -32,19 +32,19 @@ def main(options):
 				continue
 
 		if not options['content-type'] is None:
-			if options['content-type'].search(log_data.content_type) == None:
+			if options['content-type'].search((log_data.content_type, "")[log_data.content_type is None]) == None:
 				continue
 
 		if not options['host'] is None:
-			if options['host'].search(log_data.host) == None:
+			if options['host'].search((log_data.host, "")[log_data.host is None]) == None:
 				continue
 
 		if not options['query'] is None:
-			if options['query'].search(log_data.query_string) == None:
+			if options['query'].search((log_data.query_string, "")[log_data.query_string is None]) == None:
 				continue
 
 		if not options['url'] is None:
-			if options['url'].search(log_data.request_url) == None:
+			if options['url'].search((log_data.request_url, "")[log_data.request_url is None]) == None:
 				continue
 
 		print line
