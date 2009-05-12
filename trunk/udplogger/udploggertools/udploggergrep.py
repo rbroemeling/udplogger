@@ -24,6 +24,10 @@ def main(options):
 			if options['status'] != log_data.status:
 				continue
 
+		if not options['method'] is None:
+			if options['method'] != log_data.method:
+				continue
+
 		if not options['tag'] is None:
 			if options['tag'] != log_data.tag:
 				continue
@@ -58,6 +62,7 @@ def parse_arguments(argv):
 	options = {}
 	options['content-type'] = None
 	options['host'] = None
+	options['method'] = None
 	options['query'] = None
 	options['status'] = None
 	options['tag'] = None
@@ -66,7 +71,7 @@ def parse_arguments(argv):
 	options['nexopia-userid'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'c:hq:s:t:u:v', ['content-type=', 'help', 'host=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'c:hq:s:t:u:v', ['content-type=', 'help', 'host=', 'method=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -89,6 +94,8 @@ def parse_arguments(argv):
 				sys.stderr.write('invalid regular expression given for option host: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
+		elif o in ('--method'):
+			options['method'] = a
 		elif o in ('--nexopia-userid'):
 			try:
 				options['nexopia-userid'] = int(a)
