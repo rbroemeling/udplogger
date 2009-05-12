@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 import Nexopia.UDPLogger.Parse
 
@@ -47,6 +48,10 @@ def main(options):
 			if options['url'].search((log_data.request_url, "")[log_data.request_url is None]) == None:
 				continue
 
+		if not options['nexopia-userid'] is None:
+			if options['nexopia-userid'] != log_data.nexopia_userid:
+				continue
+
 		print line
 
 def parse_arguments(argv):
@@ -58,9 +63,10 @@ def parse_arguments(argv):
 	options['tag'] = None
 	options['time-used'] = None
 	options['url'] = None
+	options['nexopia-userid'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'c:hq:s:t:u:v', ['content-type=', 'help', 'host=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'c:hq:s:t:u:v', ['content-type=', 'help', 'host=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -81,6 +87,15 @@ def parse_arguments(argv):
 				options['host'] = re.compile(a)
 			except Exception, e:
 				sys.stderr.write('invalid regular expression given for option host: "%s" (%s)\n' % ((a), str(e)))
+				usage()
+				sys.exit(2)
+		elif o in ('--nexopia-userid'):
+			try:
+				options['nexopia-userid'] = int(a)
+				if options['nexopia-userid'] < 0:
+					raise ValueError
+			except (TypeError, ValueError), e:
+				sys.stderr.write('invalid argument for option nexopia-userid (must be integer x, where x >= 0): "%s"\n' % (a))
 				usage()
 				sys.exit(2)
 		elif o in ('-q', '--query'):
