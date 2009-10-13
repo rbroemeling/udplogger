@@ -52,14 +52,14 @@ def parse_arguments(argv):
 		usage()
 		sys.exit(3)
 	for o, a in opts:
-		if o in ('-d', '--database'):
+		if o in ['-d', '--database']:
 			options['database'] = sqlite3.connect(a)
-		elif o in ('-h', '--help'):
+		elif o in ['-h', '--help']:
 			usage()
 			sys.exit(0)
-		elif o in ('-v', '--verbose'):
+		elif o in ['-v', '--verbose']:
 			options['verbosity'] += 1
-		elif o in ('--version'):
+		elif o in ['--version']:
 			r = '$Revision$'
 			r = r.strip(' $')
 			r = r.lower()

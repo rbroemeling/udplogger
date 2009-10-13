@@ -77,26 +77,26 @@ def parse_arguments(argv):
 		usage()
 		sys.exit(3)
 	for o, a in opts:
-		if o in ('--content-type'):
+		if o in ['--content-type']:
 			try:
 				options['content-type'] = re.compile(a)
 			except Exception, e:
 				sys.stderr.write('invalid regular expression given for option content-type: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
-		elif o in ('-h', '--help'):
+		elif o in ['-h', '--help']:
 			usage()
 			sys.exit(0)
-		elif o in ('--host'):
+		elif o in ['--host']:
 			try:
 				options['host'] = re.compile(a)
 			except Exception, e:
 				sys.stderr.write('invalid regular expression given for option host: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
-		elif o in ('--method'):
+		elif o in ['--method']:
 			options['method'] = a
-		elif o in ('--nexopia-userid'):
+		elif o in ['--nexopia-userid']:
 			try:
 				options['nexopia-userid'] = int(a)
 				if options['nexopia-userid'] < 0:
@@ -105,23 +105,23 @@ def parse_arguments(argv):
 				sys.stderr.write('invalid argument for option nexopia-userid (must be integer x, where x >= 0): "%s"\n' % (a))
 				usage()
 				sys.exit(2)
-		elif o in ('--query'):
+		elif o in ['--query']:
 			try:
 				options['query'] = re.compile(a)
 			except Exception, e:
 				sys.stderr.write('invalid regular expression given for option query: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
-		elif o in ('--status'):
+		elif o in ['--status']:
 			try:
 				options['status'] = int(a)
 			except (TypeError, ValueError), e:
 				sys.stderr.write('invalid argument for option status: "%s"\n' % (a))
 				usage()
 				sys.exit(2)
-		elif o in ('--tag'):
+		elif o in ['--tag']:
 			options['tag'] = a
-		elif o in ('--time-used'):
+		elif o in ['--time-used']:
 			try:
 				options['time-used'] = int(a)
 				if options['time-used'] not in range(-1, 11):
@@ -130,14 +130,14 @@ def parse_arguments(argv):
 				sys.stderr.write('invalid argument for option time-used (must be integer x, where -1 <= x <= 10): "%s"\n' % (a))
 				usage()
 				sys.exit(2)
-		elif o in ('--url'):
+		elif o in ['--url']:
 			try:
 				options['url'] = re.compile(a)
 			except Exception, e:
 				sys.stderr.write('invalid regular expression given for option url: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
-		elif o in ('-v', '--version'):
+		elif o in ['-v', '--version']:
 			r = '$Revision$'
 			r = r.strip(' $')
 			r = r.lower()
