@@ -138,11 +138,7 @@ def parse_arguments(argv):
 				usage()
 				sys.exit(2)
 		elif o in ['-v', '--version']:
-			r = '$Revision$'
-			r = r.strip(' $')
-			r = r.lower()
-			r = r.replace(': ', ' r')
-			print 'udploggergrep.py', r
+			print 'udploggergrep.py r%s' % (re.sub('[^0-9]', '', '$Revision$'))
 			sys.exit(0)
 		else:
 			assert False, 'unhandled option: ' + o

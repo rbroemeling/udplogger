@@ -4,6 +4,7 @@ import Nexopia.UDPLogger.Parse
 import Nexopia.UDPLogger.Statistics
 
 import getopt
+import re
 import sqlite3
 import sys
 import time
@@ -60,11 +61,7 @@ def parse_arguments(argv):
 		elif o in ['-v', '--verbose']:
 			options['verbosity'] += 1
 		elif o in ['--version']:
-			r = '$Revision$'
-			r = r.strip(' $')
-			r = r.lower()
-			r = r.replace(': ', ' r')
-			print 'udploggerstats.py', r
+			print 'udploggerstats.py r%s' % (re.sub('[^0-9]', '', '$Revision$'))
 			sys.exit(0)
 		else:
 			assert False, 'unhandled option: ' + o
