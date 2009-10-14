@@ -4,43 +4,69 @@
 import Nexopia.UDPLogger.Parse
 
 import getopt
-from multiprocessing import Process, Queue
+import multiprocessing
 import os
+import Queue
 import re
 import sys
 import time
 import urllib2
 
-def fetch(url, vhost = None):
-	print url
-	req = urllib2.Request(url, None, {'User-Agent': 'udploggersiege.py/' + re.sub('[^0-9]', '', '$Revision$')})
-	if vhost is not None:
-		req.add_header('Host', vhost)
-	try:
-		result = urllib2.urlopen(req)
-	except urllib2.HTTPError, e:
-		return e.code
-	except urllib2.URLError, e:
-		return None
-	else:
-		return 200
+class ResultSummary:
+	"""A simple class to keep track of our result counts, grouped by response code."""
+	status = {}
+	total = 0
+
+	def __str__(self):
+		s  = ""
+		s += "%d results (Code/Occurrence)" % self.total
+		for code in self.status:
+			s += " %s/%s" % (code, self.status[code])
+		return s
+
+	def add(self, result):
+		if (result not in self.status):
+			self.status[result] = 0
+		self.status[result] += 1
+		self.total += 1
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, 'STOP'):
-		result = fetch(url, options['target-vhost'])
-		response_queue.put(result)
+		req = urllib2.Request(url, None, {'User-Agent': 'udploggersiege.py/' + re.sub('[^0-9]', '', '$Revision$')})
+		if options['target-vhost'] is not None:
+			req.add_header('Host', options['target-vhost'])
+		try:
+			result = urllib2.urlopen(req)
+		except urllib2.HTTPError, e:
+			response_queue.put(e.code, True)
+			raise
+		except urllib2.URLError, e:
+			response_queue.put(None, True)
+			raise
+		else:
+			response_queue.put(200, True)
 
+def harvest_results(query_count, response_queue, results, block):
+	while results.total < query_count:
+		try:
+			status = response_queue.get(False)
+			results.add(status)
+		except Queue.Empty:
+			if not block:
+				break
+	
 def main(options):
 	lineno = 0
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
-	response_queue = Queue()
+	query_count = 0
+	response_queue = multiprocessing.Queue()
+	results = ResultSummary()
 	timestamp_delta = None
-	url_queue = Queue()
-	
+	url_queue = multiprocessing.Queue()
 	
 	# Start our fetch worker processes.
 	for i in range(options['max-concurrent-requests']):
-		Process(target=fetch_worker, args=(url_queue, response_queue, options)).start()
+		multiprocessing.Process(target=fetch_worker, args=(url_queue, response_queue, options)).start()
 	
 	# Iterate over stdin and queue each request that we find.
 	for line in sys.stdin:
@@ -57,27 +83,37 @@ def main(options):
 			i = time.time() - log_data.unix_timestamp
 			if (i < timestamp_delta):
 				time.sleep(timestamp_delta - i)
-		url_queue.put(options['target-host'] + log_data.request_url)
-	
+		url_queue.put(options['target-host'] + log_data.request_url, True)
+		query_count += 1
+		harvest_results(query_count, response_queue, results, False)
+
 	# Stop all of our fetch worker processes.
 	for i in range(options['max-concurrent-requests']):
-		url_queue.put('STOP')
+		url_queue.put('STOP', True)
 
+	# Ensure that we have harvested all of our results.
+	harvest_results(query_count, response_queue, results, True)
+
+	# Display our results.
+	print results
+	
 def parse_arguments(argv):
 	options = {}
 	options['flood'] = None
-	options['max-concurrent-requests'] = 128
+	options['max-concurrent-requests'] = 1
 	options['target-host'] = None
 	options['target-vhost'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'hv', ['flood', 'help', 'max-concurrent-requests=', 'target-host=', 'target-vhost=', 'version'])
+		opts, args = getopt.getopt(argv, 'hv', ['debug', 'flood', 'help', 'max-concurrent-requests=', 'target-host=', 'target-vhost=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
 		sys.exit(3)
 	for o, a in opts:
-		if o in ['--flood']:
+		if o in ['--debug']:
+			pass
+		elif o in ['--flood']:
 			options['flood'] = 1
 		elif o in ['-h', '--help']:
 			usage()
@@ -99,7 +135,6 @@ def parse_arguments(argv):
 			print 'udploggersiege.py r%s' % (re.sub('[^0-9]', '', '$Revision$'))
 			sys.exit(0)
 		else:
-			print "in assert"
 			assert False, 'unhandled option: ' + o
 	if options['target-host'] is None:
 		sys.stderr.write('no target-host specified')
@@ -113,6 +148,7 @@ def usage():
 	print '''
 Usage %s --target-host <host> [OPTIONS]
 
+      --debug                                    display verbose debugging information
       --flood                                    do not mirror the request load by delaying between requests
   -h, --help                                     display this help and exit
       --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 128)
