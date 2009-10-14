@@ -37,7 +37,7 @@ class ResultSummary:
 	def checkpoint(self):
 		if (time.time() - self.last_display) > 30:
 			self.last_display = time.time()
-			print self
+			print "Checkpoint: " + self
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, "STOP"):
@@ -49,7 +49,10 @@ def fetch_worker(url_queue, response_queue, options):
 		except urllib2.HTTPError, e:
 			response_queue.put(e.code, True)
 		except urllib2.URLError, e:
-			response_queue.put("Error", True)
+			if str(e.args[0]).startswith("timed out"):
+				response_queue.put("Timeout", True)
+			else:
+				response_queue.put("Error", True)
 		else:
 			response_queue.put(200, True)
 
@@ -103,7 +106,7 @@ def main(options):
 	harvest_results(query_count, response_queue, results, True)
 
 	# Display our results.
-	print results
+	print "Run Complete: " + results
 	
 def parse_arguments(argv):
 	options = {}
