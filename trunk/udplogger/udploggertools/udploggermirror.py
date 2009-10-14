@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+__version__ = "$Revision$"
+
 import Nexopia.UDPLogger.Parse
 
 import logging
@@ -28,7 +30,7 @@ class ResultSummary:
 	def __str__(self):
 		s = ""
 		if self.total > 0:
-			s += "%d results (code[occurrences])" % self.total
+			s += "%d results.  Breakdown (code[occurrences]):" % self.total
 			for code in self.status:
 				s += " %s[%s]" % (code, self.status[code])
 		return s
@@ -49,7 +51,7 @@ class ResultSummary:
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, "STOP"):
-		req = urllib2.Request(url, None, {"User-Agent": "udploggermirror.py/" + re.sub("[^0-9]", "", "$Revision$")})
+		req = urllib2.Request(url, None, {"User-Agent": "udploggermirror.py/" + re.sub("[^0-9]", "", __version__)})
 		if options.vhost is not None:
 			req.add_header("Host", options.vhost)
 		try:
@@ -123,7 +125,7 @@ def main(options):
 def parse_arguments():
 	parser = optparse.OptionParser(
 			usage="%prog [options] --target-host <host>",
-			version="%prog r" + re.sub("[^0-9]", "", "$Revision$")
+			version="%prog r" + re.sub("[^0-9]", "", __version__)
 		)
 	parser.add_option(
 		"--checkpoint",
@@ -167,7 +169,6 @@ def parse_arguments():
 		type="int"
 	)
 
-	# Parse arguments into our options object.
 	(options, args) = parser.parse_args()
 	
 	# Do final checks and additional verification of parsed values.
