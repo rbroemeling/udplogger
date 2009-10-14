@@ -15,14 +15,18 @@ import urllib2
 
 class ResultSummary:
 	"""A simple class to keep track of our result counts, grouped by response code."""
+	last_display = 0
 	status = {}
 	total = 0
 
 	def __str__(self):
-		s  = ""
-		s += "%d results (Occurrences/Code)" % self.total
-		for code in self.status:
-			s += " %s/%s" % (self.status[code], code)
+		s = ""
+		if self.total > 0:
+			s += "%d results (code[occurrences])" % self.total
+			for code in self.status:
+				s += " %s[%s]" % (code, self.status[code])
+		else:
+			s += "no results yet"
 		return s
 
 	def add(self, result):
@@ -30,6 +34,11 @@ class ResultSummary:
 			self.status[result] = 0
 		self.status[result] += 1
 		self.total += 1
+
+	def checkpoint(self):
+		if (time.time() - self.last_display) > 30:
+			self.last_display = time.time()
+			print self
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, 'STOP'):
@@ -41,7 +50,7 @@ def fetch_worker(url_queue, response_queue, options):
 		except urllib2.HTTPError, e:
 			response_queue.put(e.code, True)
 		except urllib2.URLError, e:
-			response_queue.put(None, True)
+			response_queue.put("Error", True)
 		else:
 			response_queue.put(200, True)
 
@@ -53,7 +62,7 @@ def harvest_results(query_count, response_queue, results, block):
 		except Queue.Empty:
 			if not block:
 				break
-	
+
 def main(options):
 	lineno = 0
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
@@ -85,6 +94,7 @@ def main(options):
 		url_queue.put(options['target-host'] + log_data.request_url, True)
 		query_count += 1
 		harvest_results(query_count, response_queue, results, False)
+		results.checkpoint()
 
 	# Stop all of our fetch worker processes.
 	for i in range(options['max-concurrent-requests']):
