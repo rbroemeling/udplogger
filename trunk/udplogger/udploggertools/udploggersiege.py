@@ -4,14 +4,45 @@
 import Nexopia.UDPLogger.Parse
 
 import getopt
+from multiprocessing import Process, Queue
+import os
+import re
 import sys
 import time
+import urllib2
+
+def fetch(url, vhost = None):
+	print url
+	req = urllib2.Request(url, None, {'User-Agent': 'udploggersiege.py/' + re.sub('[^0-9]', '', '$Revision$')})
+	if vhost is not None:
+		req.add_header('Host', vhost)
+	try:
+		result = urllib2.urlopen(req)
+	except urllib2.HTTPError, e:
+		return e.code
+	except urllib2.URLError, e:
+		return None
+	else:
+		return 200
+
+def fetch_worker(url_queue, response_queue, options):
+	for url in iter(url_queue.get, 'STOP'):
+		result = fetch(url, options['target-vhost'])
+		response_queue.put(result)
 
 def main(options):
-	log_data = Nexopia.UDPLogger.Parse.LogLine()
-
-	timestamp_delta = None
 	lineno = 0
+	log_data = Nexopia.UDPLogger.Parse.LogLine()
+	response_queue = Queue()
+	timestamp_delta = None
+	url_queue = Queue()
+	
+	
+	# Start our fetch worker processes.
+	for i in range(options['max-concurrent-requests']):
+		Process(target=fetch_worker, args=(url_queue, response_queue, options)).start()
+	
+	# Iterate over stdin and queue each request that we find.
 	for line in sys.stdin:
 		lineno += 1
 		line = line.rstrip()
@@ -26,7 +57,11 @@ def main(options):
 			i = time.time() - log_data.unix_timestamp
 			if (i < timestamp_delta):
 				time.sleep(timestamp_delta - i)
-		print log_data.request_url
+		url_queue.put(options['target-host'] + log_data.request_url)
+	
+	# Stop all of our fetch worker processes.
+	for i in range(options['max-concurrent-requests']):
+		url_queue.put('STOP')
 
 def parse_arguments(argv):
 	options = {}
@@ -61,11 +96,7 @@ def parse_arguments(argv):
 		elif o in ['--target-vhost']:
 			options['target-vhost'] = a
 		elif o in ['-v', '--version']:
-			r = '$Revision$'
-			r = r.strip(' $')
-			r = r.lower()
-			r = r.replace(': ', ' r')
-			print 'udploggersiege.py', r
+			print 'udploggersiege.py r%s' % (re.sub('[^0-9]', '', '$Revision$'))
 			sys.exit(0)
 		else:
 			print "in assert"
@@ -85,8 +116,8 @@ Usage %s --target-host <host> [OPTIONS]
       --flood                                    do not mirror the request load by delaying between requests
   -h, --help                                     display this help and exit
       --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 128)
-      --target-host <host>                       send requests to <host>
-      --target-vhost <vhost>                     over-ride the default <host> setting and set the vhost to <vhost>
+      --target-host <host>                       send requests to <host> (example: 'http://beta.nexopia.com')
+      --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
   -v, --version                                  display udploggersiege.py version and exit
 ''' % (sys.argv[0])
 
