@@ -112,7 +112,7 @@ def parse_arguments(argv):
 	options["max-concurrent-requests"] = 32
 	options["target-host"] = None
 	options["target-vhost"] = None
-	options["timeout"] = 3
+	options["timeout"] = 2
 
 	try:
 		opts, args = getopt.getopt(argv, "hv", ["debug", "flood", "help", "max-concurrent-requests=", "target-host=", "target-vhost=", "timeout=", "version"])
@@ -183,7 +183,7 @@ Usage %s --target-host <host> [OPTIONS]
       --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 32)
       --target-host <host>                       send requests to <host> (example: http://beta.nexopia.com)
       --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
-      --timeout <secs>                           timeout connection requests after <secs> seconds (default: 3)
+      --timeout <secs>                           timeout connection requests after <secs> seconds (default: 2)
   -v, --version                                  display udploggersiege.py version and exit
 """ % (sys.argv[0])
 
