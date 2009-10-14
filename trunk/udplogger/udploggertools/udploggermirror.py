@@ -37,7 +37,9 @@ class ResultSummary:
 	def checkpoint(self):
 		if (time.time() - self.last_display) > 30:
 			self.last_display = time.time()
-			print "Checkpoint: " + self
+			s = str(self)
+			if s:
+				print "Checkpoint: " + s
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, "STOP"):
@@ -52,6 +54,7 @@ def fetch_worker(url_queue, response_queue, options):
 			if str(e.args[0]).startswith("timed out"):
 				response_queue.put("Timeout", True)
 			else:
+				logging.exception("Unhandled URLError fetching %s", url)
 				response_queue.put("Error", True)
 		else:
 			response_queue.put(200, True)
@@ -160,11 +163,11 @@ def parse_arguments(argv):
 			assert False, "unhandled option: " + o
 
 	# Initialize our logging layer.
+	loglevel = logging.INFO
 	if options["debug"]:
-		logging.basicConfig(level = logging.DEBUG)
-	else:
-		logging.basicConfig(level = logging.INFO)
-
+		loglevel = logging.DEBUG
+	logging.basicConfig(datefmt = "%d %b %Y %H:%M:%S", format = "%(asctime)s %(levelname)-8s %(message)s", level = loglevel)
+	
 	# Make --target-host a required option.
 	if options["target-host"] is None:
 		sys.stderr.write("no target-host specified")
