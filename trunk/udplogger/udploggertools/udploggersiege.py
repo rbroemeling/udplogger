@@ -4,6 +4,7 @@
 import Nexopia.UDPLogger.Parse
 
 import getopt
+import logging
 import multiprocessing
 import os
 import Queue
@@ -85,7 +86,7 @@ def main(options):
 			continue
 		if timestamp_delta is None:
 			timestamp_delta = time.time() - log_data.unix_timestamp
-		if options["flood"] is None:
+		if not options["flood"]:
 			i = time.time() - log_data.unix_timestamp
 			if (i < timestamp_delta):
 				time.sleep(timestamp_delta - i)
@@ -106,8 +107,9 @@ def main(options):
 	
 def parse_arguments(argv):
 	options = {}
-	options["flood"] = None
-	options["max-concurrent-requests"] = 1
+	options["debug"] = False
+	options["flood"] = False
+	options["max-concurrent-requests"] = 32
 	options["target-host"] = None
 	options["target-vhost"] = None
 	options["timeout"] = 3
@@ -120,9 +122,9 @@ def parse_arguments(argv):
 		sys.exit(3)
 	for o, a in opts:
 		if o in ["--debug"]:
-			pass
+			options["debug"] = True
 		elif o in ["--flood"]:
-			options["flood"] = 1
+			options["flood"] = True
 		elif o in ["-h", "--help"]:
 			usage()
 			sys.exit(0)
@@ -153,7 +155,13 @@ def parse_arguments(argv):
 			sys.exit(0)
 		else:
 			assert False, "unhandled option: " + o
-	
+
+	# Initialize our logging layer.
+	if options["debug"]:
+		logging.basicConfig(level = logging.DEBUG)
+	else:
+		logging.basicConfig(level = logging.INFO)
+
 	# Make --target-host a required option.
 	if options["target-host"] is None:
 		sys.stderr.write("no target-host specified")
@@ -172,7 +180,7 @@ Usage %s --target-host <host> [OPTIONS]
       --debug                                    display verbose debugging information
       --flood                                    do not mirror the request load by delaying between requests
   -h, --help                                     display this help and exit
-      --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 128)
+      --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 32)
       --target-host <host>                       send requests to <host> (example: http://beta.nexopia.com)
       --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
       --timeout <secs>                           timeout connection requests after <secs> seconds (default: 3)
