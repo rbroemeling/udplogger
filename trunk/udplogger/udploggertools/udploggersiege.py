@@ -8,6 +8,7 @@ import multiprocessing
 import os
 import Queue
 import re
+import socket
 import sys
 import time
 import urllib2
@@ -19,9 +20,9 @@ class ResultSummary:
 
 	def __str__(self):
 		s  = ""
-		s += "%d results (Code/Occurrence)" % self.total
+		s += "%d results (Occurrences/Code)" % self.total
 		for code in self.status:
-			s += " %s/%s" % (code, self.status[code])
+			s += " %s/%s" % (self.status[code], code)
 		return s
 
 	def add(self, result):
@@ -39,10 +40,8 @@ def fetch_worker(url_queue, response_queue, options):
 			result = urllib2.urlopen(req)
 		except urllib2.HTTPError, e:
 			response_queue.put(e.code, True)
-			raise
 		except urllib2.URLError, e:
 			response_queue.put(None, True)
-			raise
 		else:
 			response_queue.put(200, True)
 
@@ -103,9 +102,10 @@ def parse_arguments(argv):
 	options['max-concurrent-requests'] = 1
 	options['target-host'] = None
 	options['target-vhost'] = None
+	options['timeout'] = 3
 
 	try:
-		opts, args = getopt.getopt(argv, 'hv', ['debug', 'flood', 'help', 'max-concurrent-requests=', 'target-host=', 'target-vhost=', 'version'])
+		opts, args = getopt.getopt(argv, 'hv', ['debug', 'flood', 'help', 'max-concurrent-requests=', 'target-host=', 'target-vhost=', 'timeout=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -131,17 +131,30 @@ def parse_arguments(argv):
 			options['target-host'] = a
 		elif o in ['--target-vhost']:
 			options['target-vhost'] = a
+		elif o in ['--timeout']:
+			try:
+				options['timeout'] = int(a)
+				if (options['timeout'] <= 0):
+					raise ValueError
+			except (TypeError, ValueError), e:
+				sys.stderr.write('invalid argument for option timeout: "%s"\n' % (a))
+				usage()
+				sys.exit(2)
 		elif o in ['-v', '--version']:
 			print 'udploggersiege.py r%s' % (re.sub('[^0-9]', '', '$Revision$'))
 			sys.exit(0)
 		else:
 			assert False, 'unhandled option: ' + o
+	
+	# Make --target-host a required option.
 	if options['target-host'] is None:
 		sys.stderr.write('no target-host specified')
 		usage()
 		sys.exit(2)
-	if options['target-vhost'] is None:
-		options['target-vhost'] = options['target-host']
+	
+	# Set the socket timeout as requested.
+	socket.setdefaulttimeout(options['timeout'])
+
 	return options
 
 def usage():
@@ -154,6 +167,7 @@ Usage %s --target-host <host> [OPTIONS]
       --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 128)
       --target-host <host>                       send requests to <host> (example: 'http://beta.nexopia.com')
       --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
+      --timeout <secs>                           timeout connection requests after <secs> seconds (default: 3)
   -v, --version                                  display udploggersiege.py version and exit
 ''' % (sys.argv[0])
 
