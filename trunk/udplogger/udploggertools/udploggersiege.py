@@ -109,7 +109,7 @@ def parse_arguments(argv):
 	options = {}
 	options["debug"] = False
 	options["flood"] = False
-	options["max-concurrent-requests"] = 32
+	options["max-concurrent-requests"] = 16
 	options["target-host"] = None
 	options["target-vhost"] = None
 	options["timeout"] = 2
@@ -180,7 +180,7 @@ Usage %s --target-host <host> [OPTIONS]
       --debug                                    display verbose debugging information
       --flood                                    do not mirror the request load by delaying between requests
   -h, --help                                     display this help and exit
-      --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 32)
+      --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 16)
       --target-host <host>                       send requests to <host> (example: http://beta.nexopia.com)
       --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
       --timeout <secs>                           timeout connection requests after <secs> seconds (default: 2)
