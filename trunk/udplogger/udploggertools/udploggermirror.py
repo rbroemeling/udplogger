@@ -41,7 +41,7 @@ class ResultSummary:
 
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, "STOP"):
-		req = urllib2.Request(url, None, {"User-Agent": "udploggersiege.py/" + re.sub("[^0-9]", "", "$Revision$")})
+		req = urllib2.Request(url, None, {"User-Agent": "udploggermirror.py/" + re.sub("[^0-9]", "", "$Revision$")})
 		if options["target-vhost"] is not None:
 			req.add_header("Host", options["target-vhost"])
 		try:
@@ -154,7 +154,7 @@ def parse_arguments(argv):
 				usage()
 				sys.exit(2)
 		elif o in ["-v", "--version"]:
-			print "udploggersiege.py r%s" % (re.sub("[^0-9]", "", "$Revision$"))
+			print "udploggermirror.py r%s" % (re.sub("[^0-9]", "", "$Revision$"))
 			sys.exit(0)
 		else:
 			assert False, "unhandled option: " + o
@@ -187,7 +187,7 @@ Usage %s --target-host <host> [OPTIONS]
       --target-host <host>                       send requests to <host> (example: http://beta.nexopia.com)
       --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
       --timeout <secs>                           timeout connection requests after <secs> seconds (default: 2)
-  -v, --version                                  display udploggersiege.py version and exit
+  -v, --version                                  display udploggermirror.py version and exit
 """ % (sys.argv[0])
 
 if __name__ == "__main__":
