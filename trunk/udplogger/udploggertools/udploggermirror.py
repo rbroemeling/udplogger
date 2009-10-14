@@ -3,9 +3,9 @@
 
 import Nexopia.UDPLogger.Parse
 
-import getopt
 import logging
 import multiprocessing
+import optparse
 import os
 import Queue
 import re
@@ -14,11 +14,16 @@ import sys
 import time
 import urllib2
 
+
 class ResultSummary:
 	"""A simple class to keep track of our result counts, grouped by response code."""
+	checkpoint_time = 30
 	last_display = 0
 	status = {}
 	total = 0
+
+	def __init__(self, options):
+		self.checkpoint_time = options.checkpoint
 
 	def __str__(self):
 		s = ""
@@ -35,17 +40,18 @@ class ResultSummary:
 		self.total += 1
 
 	def checkpoint(self):
-		if (time.time() - self.last_display) > 30:
+		if (time.time() - self.last_display) > self.checkpoint_time:
 			self.last_display = time.time()
 			s = str(self)
 			if s:
 				print "Checkpoint: " + s
 
+
 def fetch_worker(url_queue, response_queue, options):
 	for url in iter(url_queue.get, "STOP"):
 		req = urllib2.Request(url, None, {"User-Agent": "udploggermirror.py/" + re.sub("[^0-9]", "", "$Revision$")})
-		if options["target-vhost"] is not None:
-			req.add_header("Host", options["target-vhost"])
+		if options.vhost is not None:
+			req.add_header("Host", options.vhost)
 		try:
 			result = urllib2.urlopen(req)
 		except urllib2.HTTPError, e:
@@ -59,6 +65,7 @@ def fetch_worker(url_queue, response_queue, options):
 		else:
 			response_queue.put(200, True)
 
+
 def harvest_results(query_count, response_queue, results, block):
 	while results.total < query_count:
 		try:
@@ -68,17 +75,18 @@ def harvest_results(query_count, response_queue, results, block):
 			if not block:
 				break
 
+
 def main(options):
 	lineno = 0
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
 	query_count = 0
 	response_queue = multiprocessing.Queue()
-	results = ResultSummary()
+	results = ResultSummary(options)
 	timestamp_delta = None
 	url_queue = multiprocessing.Queue()
 	
 	# Start our fetch worker processes.
-	for i in range(options["max-concurrent-requests"]):
+	for i in range(options.concurrency):
 		multiprocessing.Process(target=fetch_worker, args=(url_queue, response_queue, options)).start()
 	
 	# Iterate over stdin and queue each request that we find.
@@ -92,106 +100,98 @@ def main(options):
 			continue
 		if timestamp_delta is None:
 			timestamp_delta = time.time() - log_data.unix_timestamp
-		if not options["flood"]:
+		if not options.flood:
 			i = time.time() - log_data.unix_timestamp
 			if (i < timestamp_delta):
 				time.sleep(timestamp_delta - i)
-		url_queue.put(options["target-host"] + log_data.request_url, True)
+		url_queue.put(options.host + log_data.request_url, True)
 		query_count += 1
 		harvest_results(query_count, response_queue, results, False)
 		results.checkpoint()
 
 	# Stop all of our fetch worker processes.
-	for i in range(options["max-concurrent-requests"]):
+	for i in range(options.concurrency):
 		url_queue.put("STOP", True)
 
 	# Ensure that we have harvested all of our results.
 	harvest_results(query_count, response_queue, results, True)
 
 	# Display our results.
-	print "Run Complete: " + results
+	print "Run Complete: " + str(results)
+
+
+def parse_arguments():
+	parser = optparse.OptionParser(
+			usage="%prog [options] --target-host <host>",
+			version="%prog r" + re.sub("[^0-9]", "", "$Revision$")
+		)
+	parser.add_option(
+		"--checkpoint",
+		default=30,
+		help="set the length of time (in seconds) between display of checkpoints [default: %default]",
+		type="int"
+	)
+	parser.add_option(
+		"--debug",
+		action="store_true",
+		default=False,
+		help="enable display of verbose debugging information"
+	)
+	parser.add_option(
+		"--flood",
+		action="store_true",
+		default=False,
+		help="disable using a delay between queueing requests to mirror request load"
+	)
+	parser.add_option(
+		"--max-concurrent-requests",
+		default=16,
+		dest="concurrency",
+		help="set the maximum number of requests to be sent concurrently [default: %default]",
+		type="int"
+	)
+	parser.add_option(
+		"--target-host",
+		dest="host",
+		help="the host to send requests to"
+	)
+	parser.add_option(
+		"--target-vhost",
+		dest="vhost",
+		help="override the default vhost HTTP header (which is based on the value of HOST)"
+	)
+	parser.add_option(
+		"--timeout",
+		default=2,
+		help="socket timeout to be used for connection requests [default: %default]",
+		type="int"
+	)
+
+	# Parse arguments into our options object.
+	(options, args) = parser.parse_args()
 	
-def parse_arguments(argv):
-	options = {}
-	options["debug"] = False
-	options["flood"] = False
-	options["max-concurrent-requests"] = 16
-	options["target-host"] = None
-	options["target-vhost"] = None
-	options["timeout"] = 2
+	# Do final checks and additional verification of parsed values.
+	if not options.host:
+		parser.error("option --target-host: required")
+	if options.timeout <= 0:
+		parser.error("option --timeout: must be larger than zero")
+	if options.checkpoint <= 0:
+		parser.error("option --checkpoint: must be larger than zero")
+	if options.concurrency <= 0:
+		parser.error("option --max-concurrent-requests: must be larger than zero")
+	
+	return options
 
-	try:
-		opts, args = getopt.getopt(argv, "hv", ["debug", "flood", "help", "max-concurrent-requests=", "target-host=", "target-vhost=", "timeout=", "version"])
-	except getopt.GetoptError, e:
-		print str(e)
-		usage()
-		sys.exit(3)
-	for o, a in opts:
-		if o in ["--debug"]:
-			options["debug"] = True
-		elif o in ["--flood"]:
-			options["flood"] = True
-		elif o in ["-h", "--help"]:
-			usage()
-			sys.exit(0)
-		elif o in ["--max-concurrent-requests"]:
-			try:
-				options["max-concurrent-requests"] = int(a)
-				if (options["max-concurrent-requests"] <= 0):
-					raise ValueError
-			except (TypeError, ValueError), e:
-				sys.stderr.write("invalid argument for option max-concurrent-requests: '%s'\n" % (a))
-				usage()
-				sys.exit(2)
-		elif o in ["--target-host"]:
-			options["target-host"] = a
-		elif o in ["--target-vhost"]:
-			options["target-vhost"] = a
-		elif o in ["--timeout"]:
-			try:
-				options["timeout"] = int(a)
-				if (options["timeout"] <= 0):
-					raise ValueError
-			except (TypeError, ValueError), e:
-				sys.stderr.write("invalid argument for option timeout: '%s'\n" % (a))
-				usage()
-				sys.exit(2)
-		elif o in ["-v", "--version"]:
-			print "udploggermirror.py r%s" % (re.sub("[^0-9]", "", "$Revision$"))
-			sys.exit(0)
-		else:
-			assert False, "unhandled option: " + o
-
+if __name__ == "__main__":
+	options = parse_arguments()
+	
 	# Initialize our logging layer.
 	loglevel = logging.INFO
-	if options["debug"]:
+	if options.debug:
 		loglevel = logging.DEBUG
 	logging.basicConfig(datefmt = "%d %b %Y %H:%M:%S", format = "%(asctime)s %(levelname)-8s %(message)s", level = loglevel)
 	
-	# Make --target-host a required option.
-	if options["target-host"] is None:
-		sys.stderr.write("no target-host specified")
-		usage()
-		sys.exit(2)
-	
 	# Set the socket timeout as requested.
-	socket.setdefaulttimeout(options["timeout"])
-
-	return options
-
-def usage():
-	print """
-Usage %s --target-host <host> [OPTIONS]
-
-      --debug                                    display verbose debugging information
-      --flood                                    do not mirror the request load by delaying between requests
-  -h, --help                                     display this help and exit
-      --max-concurrent-requests <num>            allow no more than <num> requests to be sent concurrently (default: 16)
-      --target-host <host>                       send requests to <host> (example: http://beta.nexopia.com)
-      --target-vhost <vhost>                     over-ride the default <host> header setting and set the vhost to <vhost>
-      --timeout <secs>                           timeout connection requests after <secs> seconds (default: 2)
-  -v, --version                                  display udploggermirror.py version and exit
-""" % (sys.argv[0])
-
-if __name__ == "__main__":
-	main(parse_arguments(sys.argv[1:]))
+	socket.setdefaulttimeout(options.timeout)
+	
+	main(options)
