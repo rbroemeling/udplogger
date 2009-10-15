@@ -148,30 +148,27 @@ def main(options):
 	# Iterate over stdin and queue each request that we find, harvesting
 	# whatever results are available after each line (non-blocking) and
 	# displaying our checkpoint summary whenever necessary.
-	try:
-		for line in sys.stdin:
-			lineno += 1
-			line = line.rstrip()
-			try:
-				log_data.parse(line)
-			except Exception, e:
-				logging.error("[line %d] could not parse data '%s': %s", lineno, line.replace("\x1e", "\\x1e"), str(e))
-				continue
-			if timestamp_delta is None:
-				timestamp_delta = time.time() - log_data.unix_timestamp
-			if not options.flood:
-				# If options.flood is not enabled, attempt to maintain
-				# our time offset from the logged data at exactly
-				# timestamp_delta seconds.
-				i = time.time() - log_data.unix_timestamp
-				if i < timestamp_delta:
-					time.sleep(timestamp_delta - i)
-			url_queue.put(options.host + log_data.request_url, True)
-			dispatched_count += 1
-			harvest_results(dispatched_count, response_queue, result_summary, False)
-			result_summary.checkpoint()
-	except KeyboardInterrupt:
-		pass
+	for line in sys.stdin:
+		lineno += 1
+		line = line.rstrip()
+		try:
+			log_data.parse(line)
+		except Exception, e:
+			logging.error("[line %d] could not parse data '%s': %s", lineno, line.replace("\x1e", "\\x1e"), str(e))
+			continue
+		if timestamp_delta is None:
+			timestamp_delta = time.time() - log_data.unix_timestamp
+		if not options.flood:
+			# If options.flood is not enabled, attempt to maintain
+			# our time offset from the logged data at exactly
+			# timestamp_delta seconds.
+			i = time.time() - log_data.unix_timestamp
+			if i < timestamp_delta:
+				time.sleep(timestamp_delta - i)
+		url_queue.put(options.host + log_data.request_url, True)
+		dispatched_count += 1
+		harvest_results(dispatched_count, response_queue, result_summary, False)
+		result_summary.checkpoint()
 
 	# Stop all of our fetch worker processes.
 	for i in range(options.concurrency):
