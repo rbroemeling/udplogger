@@ -102,25 +102,20 @@ def fetch_worker(url_queue, response_queue, vhost = None):
 			response_queue.put(200, True)
 
 
-def harvest_results(max, result_queue, result_summary, block):
+def harvest_results(result_queue, result_summary):
 	"""
 	Harvest results from an input queue and use them to update our summary.
 	
 	Keyword arguments:
-	max -- harvest at most this number of results from the input queue
 	result_queue -- the input queue to harvest results from
 	result_summary -- the ResultSummary object to be updated
-	block -- whether to block waiting for more until we have at least max results
 	"""
-	while result_summary.total < max:
+	while True:
 		try:
 			status = result_queue.get(False)
 			result_summary.add(status)
 		except Queue.Empty:
-			if not block:
-				break
-			else:
-				time.sleep(1)
+			break
 
 
 def main(options):
@@ -168,7 +163,7 @@ def main(options):
 				time.sleep(timestamp_delta - i)
 		url_queue.put(options.host + log_data.request_url, True)
 		dispatched_count += 1
-		harvest_results(dispatched_count, response_queue, result_summary, False)
+		harvest_results(response_queue, result_summary)
 		result_summary.checkpoint()
 
 	# Stop all of our fetch worker processes.
@@ -176,7 +171,10 @@ def main(options):
 		url_queue.put("STOP", True)
 
 	# Ensure that we have harvested all of our results.
-	harvest_results(dispatched_count, response_queue, result_summary, True)
+	while result_summary.total < dispatched_count:
+		harvest_results(response_queue, result_summary)
+		result_summary.checkpoint()
+		time.sleep(1)
 
 	print "Run Complete: " + str(result_summary)
 
