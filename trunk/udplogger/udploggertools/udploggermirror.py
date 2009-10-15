@@ -5,6 +5,7 @@ __version__ = "$Revision$"
 
 import Nexopia.UDPLogger.Parse
 
+import datetime
 import logging
 import multiprocessing
 import optparse
@@ -24,17 +25,19 @@ class ResultSummary:
 	ease standardized display of that summary data to the user.
 	"""
 	checkpoint_time = 30
-	last_display = 0
+	last_checkpoint_timestamp = 0
+	last_checkpoint_total = 0
 	status = {}
 	total = 0
 
 	def __init__(self, options):
 		self.checkpoint_time = options.checkpoint
+		self.last_checkpoint_timestamp = time.time()
 
 	def __str__(self):
 		s = ""
 		if self.total > 0:
-			s += "%d results.  Breakdown (code[occurrences]):" % self.total
+			s += "%d results total - breakdown (code[occurrences]):" % self.total
 			for code in self.status:
 				s += " %s[%s]" % (code, self.status[code])
 		return s
@@ -56,11 +59,16 @@ class ResultSummary:
 		Display a checkpoint of the current summary data every
 		checkpoint_time seconds.
 		"""
-		if (time.time() - self.last_display) > self.checkpoint_time:
-			self.last_display = time.time()
-			s = str(self)
-			if len(s) > 0:
-				print "Checkpoint: " + s
+		if (time.time() - self.last_checkpoint_timestamp) > self.checkpoint_time:
+			if self.total > 0:
+				delta = self.total - self.last_checkpoint_total
+				rate = delta / (time.time() - self.last_checkpoint_timestamp)
+				checkpoint_str = "(+% 3d results, %.3f/sec): %s" % (delta, rate, str(self))
+			else:
+				checkpoint_str = "(+  0 results, 0.000/sec): no results yet"
+			print datetime.date.today().strftime("%Y-%m-%d %H:%M:%S"), "checkpoint %s" % (checkpoint_str)
+			self.last_checkpoint_timestamp = time.time()
+			self.last_checkpoint_total = self.total
 
 
 def fetch_worker(url_queue, response_queue, vhost = None):
