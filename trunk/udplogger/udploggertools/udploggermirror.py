@@ -15,6 +15,7 @@ import socket
 import sys
 import time
 import urllib2
+import urlparse
 
 
 class ResultSummary:
@@ -227,6 +228,11 @@ def parse_arguments():
 	# Do final checks and additional/user verification of parsed values.
 	if not options.host:
 		parser.error("option --target-host: required")
+	else:
+		if options.host.find('://') == -1:
+			options.host = "http://%s" % options.host
+		host_parsed = urlparse.urlparse(options.host)
+		options.host = "%s://%s" % (host_parsed[0], host_parsed[1])
 	if options.timeout <= 0:
 		parser.error("option --timeout: must be larger than zero")
 	if options.checkpoint <= 0:
@@ -246,6 +252,8 @@ if __name__ == "__main__":
 	logging.basicConfig(datefmt = "%d %b %Y %H:%M:%S", format = "%(asctime)s %(levelname)-8s %(message)s", level = loglevel)
 	del loglevel
 
+	logging.debug("options: %s", str(options))
+	
 	# Set the socket timeout as requested.
 	socket.setdefaulttimeout(options.timeout)
 	
