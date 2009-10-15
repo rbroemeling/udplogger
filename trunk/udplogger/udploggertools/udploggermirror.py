@@ -67,7 +67,7 @@ class ResultSummary:
 				checkpoint_str = str(self)
 			else:
 				checkpoint_str = "no results yet"
-			print datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "checkpoint (%+4d results, %+06.3f/sec): %s" % (delta, rate, checkpoint_str)
+			print datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "checkpoint (%-+4d results, %+06.3f/sec): %s" % (delta, rate, checkpoint_str)
 			self.last_checkpoint_timestamp = time.time()
 			self.last_checkpoint_total = self.total
 
