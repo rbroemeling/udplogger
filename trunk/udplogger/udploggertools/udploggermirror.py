@@ -18,7 +18,10 @@ import urllib2
 
 
 class ResultSummary:
-	"""A simple class to keep track of our result counts, grouped by response code."""
+	"""
+	A simple class to keep track of summary data about our results and
+	ease standardized display of that summary data to the user.
+	"""
 	checkpoint_time = 30
 	last_display = 0
 	status = {}
@@ -36,24 +39,45 @@ class ResultSummary:
 		return s
 
 	def add(self, result):
-		if (result not in self.status):
+		"""
+		Add a given result to our summary data.
+		
+		Keyword arguments:
+		result -- the result to add to our summary data
+		"""
+		if result not in self.status:
 			self.status[result] = 0
 		self.status[result] += 1
 		self.total += 1
 
 	def checkpoint(self):
+		"""
+		Display a checkpoint of the current summary data every
+		checkpoint_time seconds.
+		"""
 		if (time.time() - self.last_display) > self.checkpoint_time:
 			self.last_display = time.time()
 			s = str(self)
-			if s:
+			if len(s) > 0:
 				print "Checkpoint: " + s
 
 
-def fetch_worker(url_queue, response_queue, options):
+def fetch_worker(url_queue, response_queue, vhost = None):
+	"""
+	Perform work: fetch URLs from an input queue, attempt to fetch the target
+	of the URL, and save the resultant status codes into a response queue.
+	Work will continue until the "STOP" element is encountered in the input
+	queue.
+	
+	Keyword arguments:
+	url_queue -- input queue of URLs to be fetched
+	response_queue -- output queue of response codes
+	vhost -- over-ride vhost ('Host:' header) to use during requests
+	"""
 	for url in iter(url_queue.get, "STOP"):
 		req = urllib2.Request(url, None, {"User-Agent": "udploggermirror.py/" + re.sub("[^0-9]", "", __version__)})
-		if options.vhost is not None:
-			req.add_header("Host", options.vhost)
+		if vhost is not None:
+			req.add_header("Host", vhost)
 		try:
 			result = urllib2.urlopen(req)
 		except urllib2.HTTPError, e:
@@ -68,61 +92,90 @@ def fetch_worker(url_queue, response_queue, options):
 			response_queue.put(200, True)
 
 
-def harvest_results(query_count, response_queue, results, block):
-	while results.total < query_count:
+def harvest_results(max, result_queue, result_summary, block):
+	"""
+	Harvest results from an input queue and use them to update our summary.
+	
+	Keyword arguments:
+	max -- harvest at most this number of results from the input queue
+	result_queue -- the input queue to harvest results from
+	result_summary -- the ResultSummary object to be updated
+	block -- whether to block waiting for more until we have at least max results
+	"""
+	while result_summary.total < max:
 		try:
-			status = response_queue.get(False)
-			results.add(status)
+			status = result_queue.get(False)
+			result_summary.add(status)
 		except Queue.Empty:
 			if not block:
 				break
+			else:
+				time.sleep(1)
 
 
 def main(options):
+	"""
+	Read udplogger lines from stdin and assign the URLs to a pool of
+	URL-fetch workers, displaying response summary information as the
+	run continues.  If options.flood is enabled, dispatch requests as fast
+	as possible.  If not, then attempt to mimic the query load level by
+	dispatching requests at approximately the same rate as they were logged.
+	
+	Keyword arguments:
+	options -- optparse options object specifying the settings to use
+	"""
+	dispatched_count = 0
 	lineno = 0
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
-	query_count = 0
 	response_queue = multiprocessing.Queue()
-	results = ResultSummary(options)
+	result_summary = ResultSummary(options)
 	timestamp_delta = None
 	url_queue = multiprocessing.Queue()
 	
 	# Start our fetch worker processes.
 	for i in range(options.concurrency):
-		multiprocessing.Process(target=fetch_worker, args=(url_queue, response_queue, options)).start()
+		multiprocessing.Process(target=fetch_worker, args=(url_queue, response_queue, options.vhost)).start()
 	
-	# Iterate over stdin and queue each request that we find.
+	# Iterate over stdin and queue each request that we find, harvesting
+	# whatever results are available after each line (non-blocking) and
+	# displaying our checkpoint summary whenever necessary.
 	for line in sys.stdin:
 		lineno += 1
 		line = line.rstrip()
 		try:
 			log_data.parse(line)
 		except Exception, e:
-			sys.stderr.write("skipping line #%d, could not parse data '%s': %s\n" % (lineno, line.replace("\x1e", "\\x1e"), str(e)))
+			logging.error("[line %d] could not parse data '%s': %s", lineno, line.replace("\x1e", "\\x1e"), str(e))
 			continue
 		if timestamp_delta is None:
 			timestamp_delta = time.time() - log_data.unix_timestamp
 		if not options.flood:
+			# If options.flood is not enabled, attempt to maintain
+			# our time offset from the logged data at exactly
+			# timestamp_delta seconds.
 			i = time.time() - log_data.unix_timestamp
-			if (i < timestamp_delta):
+			if i < timestamp_delta:
 				time.sleep(timestamp_delta - i)
 		url_queue.put(options.host + log_data.request_url, True)
-		query_count += 1
-		harvest_results(query_count, response_queue, results, False)
-		results.checkpoint()
+		dispatched_count += 1
+		harvest_results(dispatched_count, response_queue, result_summary, False)
+		result_summary.checkpoint()
 
 	# Stop all of our fetch worker processes.
 	for i in range(options.concurrency):
 		url_queue.put("STOP", True)
 
 	# Ensure that we have harvested all of our results.
-	harvest_results(query_count, response_queue, results, True)
+	harvest_results(dispatched_count, response_queue, result_summary, True)
 
-	# Display our results.
-	print "Run Complete: " + str(results)
+	print "Run Complete: " + str(result_summary)
 
 
 def parse_arguments():
+	"""
+	Parse command-line arguments and setup a optparse object specifying
+	the settings for this application to use.
+	"""
 	parser = optparse.OptionParser(
 			usage="%prog [options] --target-host <host>",
 			version="%prog r" + re.sub("[^0-9]", "", __version__)
@@ -171,7 +224,7 @@ def parse_arguments():
 
 	(options, args) = parser.parse_args()
 	
-	# Do final checks and additional verification of parsed values.
+	# Do final checks and additional/user verification of parsed values.
 	if not options.host:
 		parser.error("option --target-host: required")
 	if options.timeout <= 0:
@@ -191,7 +244,8 @@ if __name__ == "__main__":
 	if options.debug:
 		loglevel = logging.DEBUG
 	logging.basicConfig(datefmt = "%d %b %Y %H:%M:%S", format = "%(asctime)s %(levelname)-8s %(message)s", level = loglevel)
-	
+	del loglevel
+
 	# Set the socket timeout as requested.
 	socket.setdefaulttimeout(options.timeout)
 	
