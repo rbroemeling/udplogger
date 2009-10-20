@@ -6,6 +6,7 @@ import Nexopia.UDPLogger.Parse
 import getopt
 import re
 import sys
+import time
 
 def main(options):
 	log_data = Nexopia.UDPLogger.Parse.LogLine()
@@ -19,6 +20,14 @@ def main(options):
 		except Exception, e:
 			sys.stderr.write('skipping line #%d, could not parse data "%s": %s\n' % (lineno, line.replace('\x1e', '\\x1e'), str(e)))
 			continue
+
+		if not options['time-after'] is None:
+			if options['time-after'] > log_data.unix_timestamp:
+				continue
+
+		if not options['time-before'] is None:
+			if options['time-before'] < log_data.unix_timestamp:
+				continue
 
 		if not options['status'] is None:
 			if options['status'] != log_data.status:
@@ -66,12 +75,14 @@ def parse_arguments(argv):
 	options['query'] = None
 	options['status'] = None
 	options['tag'] = None
+	options['time-after'] = None
+	options['time-before'] = None
 	options['time-used'] = None
 	options['url'] = None
 	options['nexopia-userid'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'hv', ['content-type=', 'help', 'host=', 'method=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-used=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'hv', ['content-type=', 'help', 'host=', 'method=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-after=', 'time-before=', 'time-used=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -121,6 +132,22 @@ def parse_arguments(argv):
 				sys.exit(2)
 		elif o in ['--tag']:
 			options['tag'] = a
+		elif o in ['--time-after']:
+			try:
+				options['time-after'] = time.mktime(time.strptime(a, '%Y-%m-%d %H:%M:%S'))
+			except (TypeError, ValueError), e:
+				sys.stderr.write('invalid argument for option time-after: "%s"\n' % (a))
+				sys.stderr.write('date and times must be in the format "%Y-%m-%d %H:%M:%S" (i.e. "2009-10-20 15:18:17")\n')
+				usage()
+				sys.exit(2)
+		elif o in ['--time-before']:
+			try:
+				options['time-before'] = time.mktime(time.strptime(a, '%Y-%m-%d %H:%M:%S'))
+			except (TypeError, ValueError), e:
+				sys.stderr.write('invalid argument for option time-before: "%s"\n' % (a))
+				sys.stderr.write('date and times must be in the format "%Y-%m-%d %H:%M:%S" (i.e. "2009-10-20 15:18:17")\n')
+				usage()
+				sys.exit(2)
 		elif o in ['--time-used']:
 			try:
 				options['time-used'] = int(a)
@@ -156,6 +183,8 @@ Usage %s [OPTIONS]
       --query <regexp>                           show log entries whose query string matches <regexp>
       --status <status code>                     show log entries whose status code equals <status code>
       --tag <tag>                                show log entries whose tag equals <tag>
+      --time-after <date/time>                   show log entries that occurred at-or-after <date/time> (e.g. 2009-10-20 15:18:17)
+      --time-before <date/time>                  show log entries that occurred before-or-at <date/time> (e.g. 2009-10-20 17:18:17)
       --time-used <time in seconds>              show log entries that took exactly <time in seconds> to complete
       --url <regexp>                             show log entries whose url matches <regexp>
   -v, --version                                  display udploggergrep.py version and exit
