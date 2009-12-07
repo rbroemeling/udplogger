@@ -181,13 +181,13 @@ def main(options):
 
 def parse_arguments():
 	"""
-	Parse command-line arguments and setup a optparse object specifying
+	Parse command-line arguments and setup an optparse object specifying
 	the settings for this application to use.
 	"""
 	parser = optparse.OptionParser(
-			usage="%prog [options] --target-host <host>",
-			version="%prog r" + re.sub("[^0-9]", "", __version__)
-		)
+		usage="%prog [options] --target-host <host>",
+		version="%prog r" + re.sub("[^0-9]", "", __version__)
+	)
 	parser.add_option(
 		"--checkpoint",
 		default=30,
