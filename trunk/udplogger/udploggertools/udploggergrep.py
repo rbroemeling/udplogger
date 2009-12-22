@@ -29,6 +29,10 @@ def main(options):
 			if options['time-before'] < log_data.unix_timestamp:
 				continue
 
+		if not options['remote-ip'] is None:
+			if options['remote-ip'] != log_data.remote_address:
+				continue
+
 		if not options['status'] is None:
 			if options['status'] != log_data.status:
 				continue
@@ -73,6 +77,7 @@ def parse_arguments(argv):
 	options['host'] = None
 	options['method'] = None
 	options['query'] = None
+	options['remote-ip'] = None
 	options['status'] = None
 	options['tag'] = None
 	options['time-after'] = None
@@ -82,7 +87,7 @@ def parse_arguments(argv):
 	options['nexopia-userid'] = None
 
 	try:
-		opts, args = getopt.getopt(argv, 'hv', ['content-type=', 'help', 'host=', 'method=', 'nexopia-userid=', 'query=', 'status=', 'tag=', 'time-after=', 'time-before=', 'time-used=', 'url=', 'version'])
+		opts, args = getopt.getopt(argv, 'hv', ['content-type=', 'help', 'host=', 'method=', 'nexopia-userid=', 'query=', 'remote-ip=', 'status=', 'tag=', 'time-after=', 'time-before=', 'time-used=', 'url=', 'version'])
 	except getopt.GetoptError, e:
 		print str(e)
 		usage()
@@ -123,6 +128,8 @@ def parse_arguments(argv):
 				sys.stderr.write('invalid regular expression given for option query: "%s" (%s)\n' % ((a), str(e)))
 				usage()
 				sys.exit(2)
+		elif o in ['--remote-ip']:
+			options['remote-ip'] = a
 		elif o in ['--status']:
 			try:
 				options['status'] = int(a)
@@ -181,6 +188,7 @@ Usage %s [OPTIONS]
       --method <method>                          show log entries whose request method equals <method>
       --nexopia-userid <uid>                     show log entries whose nexopia UID equals <uid>
       --query <regexp>                           show log entries whose query string matches <regexp>
+      --remote-ip <ip>                           show log entries whose remote ip matches <ip>
       --status <status code>                     show log entries whose status code equals <status code>
       --tag <tag>                                show log entries whose tag equals <tag>
       --time-after <date/time>                   show log entries that occurred at-or-after <date/time> (e.g. 2009-10-20 15:18:17)
