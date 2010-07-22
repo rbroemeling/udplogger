@@ -79,9 +79,9 @@ def main(options):
 			logging.error('skipping line #%d, could not parse data "%s": %s\n' % (lineno, line.replace('\x1e', '\\x1e'), str(e)))
 			continue
 
-		if options['remote_ip']:
+		if options.remote_ip:
 			ip_sw.add(log_data.unix_timestamp, log_data.remote_address, 1)
-			for ip in ip_sw.fetch_keys_above(options['rate']):
+			for ip in ip_sw.fetch_keys_above(options.rate):
 				if reported is not None:
 					if ip in reported:
 						continue
@@ -92,11 +92,12 @@ def main(options):
 					continue
 				else:
 					logging.info('remote ip address rate-limit triggered for %s' % (ip))
-					execute_command(options.command, log_data)
+					if options.command:
+						execute_command(options.command, log_data)
 
-		if options['nexopia_userid']:
+		if options.nexopia_userid:
 			uid_sw.add(log_data.unix_timestamp, log_data.nexopia_userid, 1)
-			for uid in uid_sw.fetch_keys_above(options['rate']):
+			for uid in uid_sw.fetch_keys_above(options.rate):
 				if reported is not None:
 					if uid in reported:
 						continue
@@ -107,7 +108,8 @@ def main(options):
 					continue
 				else:
 					logging.info('nexopia user id rate-limit triggered for %d' % (uid))
-					execute_command(options.command, log_data)
+					if options.command:
+						execute_command(options.command, log_data)
 
 def parse_arguments():
 	"""
@@ -115,7 +117,7 @@ def parse_arguments():
 	the settings for this application to use.
 	"""
 	parser = optparse.OptionParser(
-		usage="%prog [options] --command <command> (--nexopia-userid|--remote-ip)",
+		usage="%prog [options] --command=COMMAND (--nexopia-userid|--remote-ip)",
 		version="%prog r" + re.sub("[^0-9]", "", __version__)
 	)
 	parser.add_option(
@@ -138,7 +140,7 @@ def parse_arguments():
 	parser.add_option(
 		"--rate",
 		default=20,
-		help="trigger the rate-limit if the aggregated data shows more than this many hits over <window-size> seconds",
+		help="trigger the rate-limit if the aggregated data shows more than this many hits within a WINDOW_SIZE period (measured in seconds)",
 		type="int"
 	)
 	parser.add_option(
@@ -153,18 +155,18 @@ def parse_arguments():
 		action="store_true",
 		default=False,
 		dest="repeat_command",
-		help="trigger the command for EACH request that exceeds the rate-limit, rather than only once per aggregated data key"
+		help="trigger the command for EACH request that exceeds the rate-limit, rather than only once per data aggregation key"
 	)
 	parser.add_option(
 		"--whitelist",
 		action="append",
-		help="whitelist an aggregation key (remote ip address or nexopia user id) so that it will not trigger <command>"
+		help="whitelist an aggregation key (remote ip address or nexopia user id) so that it will not trigger COMMAND"
 	)
 	parser.add_option(
 		"--window-size",
 		default=60,
 		dest="window_size",
-		help="trigger the rate-limit if the aggregated data shows more than <rate> hits over this many seconds",
+		help="trigger the rate-limit if the aggregated data shows more than RATE hits within this many seconds",
 		type="int"
 	)
 	
