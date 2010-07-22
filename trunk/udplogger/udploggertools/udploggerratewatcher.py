@@ -69,7 +69,7 @@ def main(options):
 	if options.repeat_command:
 		reported = None
 	else:
-		reported = []
+		reported = set()
 	for line in sys.stdin:
 		lineno += 1
 		line = line.rstrip()
