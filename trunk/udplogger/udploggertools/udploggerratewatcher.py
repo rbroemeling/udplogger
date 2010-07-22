@@ -44,7 +44,7 @@ class SlidingWindow:
 					del self.aggregate[key]
 			del self.window[expired_timestamp]
 		assert len(self.window_timestamps) == len(self.window)
-		assert len(self.window_timestamps) <= self.window_size
+		assert len(self.window_timestamps) <= (self.window_size + 1)
 
 	def fetch_keys_above(self, limit):
 		keys_above = []
