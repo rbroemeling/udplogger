@@ -37,7 +37,7 @@ class SlidingWindow:
 	def expire(self):
 		while (len(self.window_timestamps) > 0) and (self.window_timestamps[0] < (self.window_timestamps[len(self.window_timestamps)-1] - self.window_size)):
 			expired_timestamp = self.window_timestamps.pop(0)
-			for key, value in self.window[expired_timestamp]:
+			for key, value in self.window[expired_timestamp].iteritems():
 				assert self.aggregate[key] >= value
 				self.aggregate[key] = self.aggregate[key] - value
 				if self.aggregate[key] == 0:
@@ -48,7 +48,7 @@ class SlidingWindow:
 
 	def fetch_keys_above(self, limit):
 		keys_above = []
-		for key, value in self.aggregate:
+		for key, value in self.aggregate.iteritems():
 			if value > limit:
 				keys_above.append(key)
 		return keys_above
