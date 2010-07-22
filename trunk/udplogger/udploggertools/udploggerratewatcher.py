@@ -69,7 +69,7 @@ def main(options):
 	if options.repeat_command:
 		reported = None
 	else:
-		reported = set()
+		reported = set([])
 	for line in sys.stdin:
 		lineno += 1
 		line = line.rstrip()
@@ -86,7 +86,7 @@ def main(options):
 					if ip in reported:
 						continue
 					else:
-						reported = reported | set(ip)				
+						reported = reported | set([ip])				
 				if ip in options.whitelist:
 					logging.debug('bypassing rate-limit for whitelisted remote ip address %s' % (ip))
 					continue
@@ -102,7 +102,7 @@ def main(options):
 					if uid in reported:
 						continue
 					else:
-						reported = reported | set(uid)
+						reported = reported | set([uid])
 				if uid in options.whitelist:
 					logging.debug('bypassing rate-limit for whitelisted nexopia user id %s' % (uid))
 					continue
