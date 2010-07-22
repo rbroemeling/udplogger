@@ -79,7 +79,7 @@ def main(options):
 			logging.error('skipping line #%d, could not parse data "%s": %s\n' % (lineno, line.replace('\x1e', '\\x1e'), str(e)))
 			continue
 
-		if options.remote_ip:
+		if options.remote_ip and log_data.remote_address is not None:
 			ip_sw.add(log_data.unix_timestamp, log_data.remote_address, 1)
 			for ip in ip_sw.fetch_keys_above(options.rate):
 				if reported is not None:
@@ -95,7 +95,7 @@ def main(options):
 					if options.command:
 						execute_command(options.command, log_data)
 
-		if options.nexopia_userid:
+		if options.nexopia_userid and log_data.nexopia_userid is not None:
 			uid_sw.add(log_data.unix_timestamp, log_data.nexopia_userid, 1)
 			for uid in uid_sw.fetch_keys_above(options.rate):
 				if reported is not None:
@@ -104,10 +104,10 @@ def main(options):
 					else:
 						reported = reported | set(uid)
 				if uid in options.whitelist:
-					logging.debug('bypassing rate-limit for whitelisted nexopia user id %d' % (uid))
+					logging.debug('bypassing rate-limit for whitelisted nexopia user id %s' % (str(uid)))
 					continue
 				else:
-					logging.info('nexopia user id rate-limit triggered for %d' % (uid))
+					logging.info('nexopia user id rate-limit triggered for %s' % (str(uid)))
 					if options.command:
 						execute_command(options.command, log_data)
 
