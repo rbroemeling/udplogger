@@ -22,7 +22,7 @@ class SlidingWindow:
 	def __init__(self, window_size):
 		self.window_size = window_size
 
-	def add(timestamp, key, value):
+	def add(self, timestamp, key, value):
 		if timestamp not in self.window:
 			self.window[timestamp] = {}
 			bisect.insort(self.window_timestamps, timestamp)
@@ -34,7 +34,7 @@ class SlidingWindow:
 			self.aggregate[key] = 0
 		self.aggregate[key] = self.aggregate[key] + value 
 
-	def expire():
+	def expire(self):
 		while (len(self.window_timestamps) > 0) and (self.window_timestamps[0] < (self.window_timestamps[len(self.window_timestamps)-1] - self.window_size)):
 			expired_timestamp = self.window_timestamps.pop(0)
 			for key, value in self.window[expired_timestamp]:
@@ -46,7 +46,7 @@ class SlidingWindow:
 		assert len(self.window_timestamps) == len(self.window)
 		assert len(self.window_timestamps) <= self.window_size
 
-	def fetch_keys_above(limit):
+	def fetch_keys_above(self, limit):
 		keys_above = []
 		for key, value in self.aggregate:
 			if value > limit:
