@@ -96,7 +96,7 @@ def main(options):
 						execute_command(options.command, log_data)
 
 		if options.nexopia_userid and log_data.nexopia_userid is not None:
-			uid_sw.add(log_data.unix_timestamp, log_data.nexopia_userid, 1)
+			uid_sw.add(log_data.unix_timestamp, str(log_data.nexopia_userid), 1)
 			for uid in uid_sw.fetch_keys_above(options.rate):
 				if reported is not None:
 					if uid in reported:
@@ -104,10 +104,10 @@ def main(options):
 					else:
 						reported = reported | set(uid)
 				if uid in options.whitelist:
-					logging.debug('bypassing rate-limit for whitelisted nexopia user id %s' % (str(uid)))
+					logging.debug('bypassing rate-limit for whitelisted nexopia user id %s' % (uid))
 					continue
 				else:
-					logging.info('nexopia user id rate-limit triggered for %s' % (str(uid)))
+					logging.info('nexopia user id rate-limit triggered for %s' % (uid))
 					if options.command:
 						execute_command(options.command, log_data)
 
