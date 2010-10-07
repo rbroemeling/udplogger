@@ -25,7 +25,7 @@
 /*
  * Usage (lighttpd):
  *   accesslog.filename = "|/path/to/udploggerd -l <listen port> -t <tag>"
-  * See udplogger.h for the suggested accesslog.format string.
+ * See udplogger.h for the suggested accesslog.format string.
  */
 #include <getopt.h>
 #include <inttypes.h>
